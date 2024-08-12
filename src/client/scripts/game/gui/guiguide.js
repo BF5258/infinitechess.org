@@ -8,7 +8,7 @@ const guiguide = (function() {
     const element_Guide = document.getElementById('guide');
     const element_Back = document.getElementById('guide-back')
 
-    // The element that holds all fairy images
+    // The element that holds all fairy images and their descriptions.
     const element_FairyImg = document.getElementById('fairy-pieces');
     // The element that holds all fairy descriptions
     const element_FairyCard = document.getElementById('fairy-card');
@@ -16,8 +16,7 @@ const guiguide = (function() {
     const element_FairyForward = document.getElementById('fairy-forward')
 
     let fairyIndex = 0;
-    let maxFairyIndex = 7;
-
+    let maxFairyIndex = element_FairyImg.querySelectorAll('picture').length - 1;
 
     function open() {
         style.revealElement(element_Guide);
@@ -43,10 +42,9 @@ const guiguide = (function() {
     }
 
     function loadAllImages() {
-        const images = element_Guide.querySelectorAll('img');
+        const images = element_Guide.querySelectorAll('picture > img[loading]');
         images.forEach(img => {
-            if (img.src) return; // Already loaded
-            img.src = img.getAttribute('data-src');  // Assumes each img has a 'data-src' attribute with the actual image URL
+            img.removeAttribute('loading');  // Remove the "loading: lazy" attribute from these images. They have now been loaded.
         });
     }
 
@@ -74,7 +72,7 @@ const guiguide = (function() {
     }
 
     function hideCurrentFairy() {
-        const allFairyImgs = element_FairyImg.querySelectorAll('img')
+        const allFairyImgs = element_FairyImg.querySelectorAll('picture')
         const targetFairyImg = allFairyImgs[fairyIndex];
         style.hideElement(targetFairyImg)
 
@@ -84,7 +82,7 @@ const guiguide = (function() {
     }
 
     function revealCurrentFairy() {
-        const allFairyImgs = element_FairyImg.querySelectorAll('img')
+        const allFairyImgs = element_FairyImg.querySelectorAll('picture')
         const targetFairyImg = allFairyImgs[fairyIndex];
         style.revealElement(targetFairyImg)
 

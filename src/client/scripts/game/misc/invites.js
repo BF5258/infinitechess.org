@@ -14,7 +14,7 @@
  * @property {string} clock - The clock value
  * @property {string} color - white/black
  * @property {string} publicity - public/private
- * @property {string} rated - unrated/rated 
+ * @property {string} rated - rated/casual
  */
 
 const invites = (function(){
@@ -162,7 +162,7 @@ const invites = (function(){
             // <div class="invite-child">Standard</div>
             // <div class="invite-child">15m+15s</div>
             // <div class="invite-child">Random</div>
-            // <div class="invite-child">Unrated</div>
+            // <div class="invite-child">Casual</div>
             // <div class="invite-child accept">Accept</div>
 
             const n = ours ? translations["invites"]["you_indicator"] : invite.name
@@ -261,7 +261,7 @@ const invites = (function(){
      * @returns {boolean} true if it is our
      */
     function isInviteOurs(invite) {
-        if (validation.getMember() === invite.name) return true;
+        if (memberHeader.getMember() === invite.name) return true;
 
         if (!invite.tag) return invite.id === ourInviteID; // Tag not present (invite converted from an HTML element), compare ID instead.
 
@@ -284,7 +284,7 @@ const invites = (function(){
         
         /**
          * Starting from the first child, the order goes:
-         * Name, Variant, Clock, Color, Publicity, Rated
+         * Name, Variant, TimeControl, Color, Publicity, Rated
          * (see the {@link Invite} object)
          */
 

@@ -13,9 +13,9 @@ const main = (function(){
      * The version of the game code currently running.
      * If this is old, the server will instruct us to refresh.
      * 
-     * THIS SHOULD ALWAYS MATCH config/convig/DEV_VERSION
+     * THIS SHOULD ALWAYS MATCH config/convig/GAME_VERSION
      */
-    const GAME_VERSION = "1.3.3.1"; // The current version of the game
+    const GAME_VERSION = "1.4"; // The current version of the game
     const devBuild = true // If true, the time when the main menu background stops moving is 2 seconds.
     const videoMode = false; // If true, doesn't render a few items, making recordings more immersive.
 
@@ -62,40 +62,8 @@ const main = (function(){
 
         localstorage.eraseExpiredItems();
 
-        queueLazyLoadImages();
-
         gameLoop(); // Update & draw the scene repeatedly
     }
-
-    // All images in the document with the "data-src" attribute will wait
-    // to be loaded until they are visible on screen!
-    function queueLazyLoadImages() {
-        const images = document.querySelectorAll('img[data-src]'); // Only select images with data-src attribute
-    
-        const lazyLoad = (entries, observer) => {
-            entries.forEach(entry => {
-                if (!entry.isIntersecting) return;
-                const img = entry.target;
-                // Check if the image is already loaded, skip setting src if it is.
-                if (!img.src) {
-                    console.log('skipping')
-                    img.src = img.getAttribute('data-src');
-                    img.removeAttribute('data-src');
-                }
-                observer.unobserve(img);
-            });
-        };
-    
-        const observer = new IntersectionObserver(lazyLoad, {
-            rootMargin: '0px 0px 50px 0px', // Adjust as needed
-            threshold: 0.01 // Adjust as needed
-        });
-    
-        images.forEach(img => {
-            observer.observe(img);
-        });
-    }
-    
 
     function initListeners() {
         input.initListeners() // Mouse, touch, & key event listeners
@@ -108,7 +76,7 @@ const main = (function(){
             // "1000 Closed by client" instead of "1001 Endpoint left"
             websocket.closeSocket();
 
-            validation.deleteToken();
+            memberHeader.deleteToken();
             
             invites.deleteInviteTagInLocalStorage();
             localstorage.eraseExpiredItems();

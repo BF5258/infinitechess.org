@@ -3,8 +3,7 @@
     <head>
         <script>
             const translations = <%-JSON.stringify({
-                ...t('header.javascript', {returnObjects: true}),
-                ...t('server.javascript', {returnObjects: true})
+                ...t('header.javascript', {returnObjects: true})
             })%>;
         </script>
         <meta charset="utf-8" />
@@ -13,7 +12,9 @@
         <title>Log In</title>
         <link rel='stylesheet' href='/css/login.css'>
         <link rel='stylesheet' href='/css/footer.css'>
-        <link rel="icon" type="image/png" href="/img/favicon.png">
+        <link rel="icon" href="/img/favicon-light.png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/img/favicon-dark.png" media="(prefers-color-scheme: dark)" id="favicon" />
+        <script defer src="/scripts/memberHeader.js"></script>
         <script defer src="/scripts/login.js"></script>
     </head>
     <body>

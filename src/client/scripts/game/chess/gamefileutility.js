@@ -163,27 +163,13 @@ const gamefileutility = (function(){
      * Returns the piece at the indicated coordinates, if there is one.
      * @param {gamefile} gamefile - The gamefile
      * @param {number[]} coords - The coordinates to retreive the piece at
-     * @returns {Piece | undefined} The piece, or *undefined* if there isn't one.
+     * @returns {Piece | undefined} The piece, or *undefined* if there isn't one: `{ type, index, coords }`
      */
     function getPieceAtCoords(gamefile, coords) {
         const type = getPieceTypeAtCoords(gamefile, coords);
         if (!type) return undefined;
         const index = getPieceIndexByTypeAndCoords(gamefile, type, coords);
         return { type, index, coords }
-    }
-
-    /**
-     * A variant of {@link getPieceAtCoords} that returns the piece at the indicated coords,
-     * if there is one, except it doesn't look for its `index`, so it's a tad faster.
-     * @param {gamefile} gamefile - The gamefile
-     * @param {number[]} coords - The coordinates to retreive the piece at
-     * @returns {Piece | undefined} The piece, or *undefined* if there isn't one.
-     */
-    function getPieceAtCoords_noIndex(gamefile, coords) { // Returns { type, coords }
-        const type = getPieceTypeAtCoords(gamefile, coords);
-        if (!type) return undefined;
-
-        return { type, coords }
     }
 
     /**
@@ -211,48 +197,53 @@ const gamefileutility = (function(){
         if (requestRemovalFromActiveGames) onlinegame.requestRemovalFromPlayersInActiveGames();
         if (wincondition.isGameConclusionDecisive(gamefile.gameConclusion)) movesscript.flagLastMoveAsMate(gamefile);
         clock.stop()
-        main.renderThisFrame();
         board.darkenColor()
         guigameinfo.gameEnd(gamefile.gameConclusion)
-        onlinegame.cancelAFKTimer();
-        onlinegame.cancelFlashTabTimer();
-        onlinegame.cancelMoveSound();
-        onlinegame.resetServerRestarting();
-        onlinegame.deleteCustomVariantOptions();
+        onlinegame.onGameConclude();
 
         const delayToPlayConcludeSoundSecs = 0.65;
         if (!onlinegame.areInOnlineGame()) {
             if (!gamefile.gameConclusion.includes('draw')) sound.playSound_win(delayToPlayConcludeSoundSecs)
             else sound.playSound_draw(delayToPlayConcludeSoundSecs)
-            // Set the Result and Condition metadata
-            const { victor, condition } = wincondition.getVictorAndConditionFromGameConclusion(conclusion)
-            gamefile.metadata.Condition = math.capitalizeFirstLetter(condition);
-            gamefile.metadata.Result = victor === 'white' ? '1-0' : victor === 'black' ? '0-1' : '0.5-0.5'
         } else { // In online game
             if (gamefile.gameConclusion.includes(onlinegame.getOurColor())) sound.playSound_win(delayToPlayConcludeSoundSecs)
             else if (gamefile.gameConclusion.includes('draw') || gamefile.gameConclusion.includes('aborted')) sound.playSound_draw(delayToPlayConcludeSoundSecs)
             else sound.playSound_loss(delayToPlayConcludeSoundSecs);
         }
 
+        // Set the Result and Condition metadata
+        setTerminationMetadata(gamefile);
+
         selection.unselectPiece();
         guipause.changeTextOfMainMenuButton()
-        setConditionMetadata(gamefile);
     }
 
     /**
-     * 
+     * Returns true if the game is over (gameConclusion is truthy).
+     * If the game is over, it will be a string. If not, it will be false.
+     * @param {gamefile} gamefile 
+     */
+    function isGameOver(gamefile) {
+        if (gamefile.gameConclusion) return true;
+        return false;
+    }
+
+    /**
+     * Sets the `Termination` and `Result` metadata of the gamefile, according to the game conclusion.
      * @param {gamefile} gamefile - The gamefile
      */
-    function setConditionMetadata(gamefile) {
+    function setTerminationMetadata(gamefile) {
         if (!gamefile.gameConclusion) return console.error("Cannot set conclusion metadata when game isn't over yet.")
 
-        const  victorAndCondition = wincondition.getVictorAndConditionFromGameConclusion(gamefile.gameConclusion);
-        const condition = math.capitalizeFirstLetter(victorAndCondition.condition);
-        gamefile.metadata.Condition = condition;
+        const victorAndCondition = wincondition.getVictorAndConditionFromGameConclusion(gamefile.gameConclusion);
+        const condition = wincondition.getTerminationInEnglish(gamefile, victorAndCondition.condition);
+        gamefile.metadata.Termination = condition;
     
-        const victor = victorAndCondition.victor;
-        if (!victor) return;
-        gamefile.metadata.Result = victor === 'white' ? '1-0' : victor === 'black' ? '0-1' : '0.5-0.5'
+        const victor = victorAndCondition.victor; // white/black/draw/undefined
+        gamefile.metadata.Result = victor === 'white' ? '1-0'
+                                 : victor === 'black' ? '0-1'
+                                 : victor === 'draw' ? '1/2-1/2'
+                                 : '0-0'; // Aborted
     }
 
     // Returns a list of all the jumping royal it comes across of a specific color.
@@ -491,7 +482,6 @@ const gamefileutility = (function(){
         getPieceIndexByTypeAndCoords,
         getPieceTypeAtCoords,
         getPieceAtCoords,
-        getPieceAtCoords_noIndex,
         getPieceFromTypeAndCoords,
         updateGameConclusion,
         concludeGame,
@@ -505,7 +495,8 @@ const gamefileutility = (function(){
         getRoyalCoords,
         getRoyalCountOfColor,
         getPieceCountOfGame,
-        getWhosTurnAtMoveIndex
+        getWhosTurnAtMoveIndex,
+        isGameOver,
     })
 
 })();

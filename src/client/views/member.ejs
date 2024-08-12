@@ -4,8 +4,7 @@
         <script>
             const translations = <%-JSON.stringify({
                 ...t('header.javascript', {returnObjects: true}),
-                ...t('member.javascript', {returnObjects: true}),
-                ...t('server.javascript', {returnObjects: true})
+                ...t('member.javascript', {returnObjects: true})
             })%>;
         </script>
         <meta charset="utf-8" />
@@ -14,7 +13,10 @@
         <title>Member</title>
         <link rel='stylesheet' href='/css/member.css'>
         <link rel='stylesheet' href='/css/footer.css'>
-        <link rel="icon" type="image/png" href="/img/favicon.png">
+        <link rel="icon" href="/img/favicon-light.png" media="(prefers-color-scheme: light)" />
+        <link rel="icon" href="/img/favicon-dark.png" media="(prefers-color-scheme: dark)" id="favicon" />
+        <script defer src="/scripts/memberHeader.js"></script>
+        <script defer src="/scripts/member.js"></script>
     </head>
     <body>
         <header>
@@ -44,7 +46,11 @@
                 </div>
                 <h2 id="verifyconfirm" class="hidden green center"><%=t('member.verify_confirm')%></h2>
                 <div class="member">
-                    <img src="/img/member_default.png" alt="Blank profile image">
+                    <picture>
+                        <source srcset="/img/member_default.webp" type="image/webp" />
+                        <source srcset="/img/member_default.avif" type="image/avif" />
+                        <img src="/img/member_default.png" alt="Blank profile image">
+                    </picture>
                     <h1 id="membername"></h1>
                 </div>
                 <section id="stats" class="center">
@@ -66,7 +72,6 @@
                 </div>
                 <p id="change" class="hidden center"><%=t('member.password_reset_message.0')%><a href="mailto:infinitechess.org@gmail.com"><%=t('member.password_reset_message.1')%></a></p>
             </div>
-            <script src="/scripts/member.js"></script>
         </main>
         <%- include(`${viewsfolder}/components/footer`, {t:t, languages:languages, language:language}) %>
     </body>

@@ -50,6 +50,8 @@ header p {
 
 
 main {
+    background-color: #fff;
+    /* Using PNG because it was the smallest after compression */
     background-image: url('/img/blank_board.png');
     background-position: center;
     background-repeat: no-repeat;
@@ -93,6 +95,10 @@ main {
     margin-top: 35px;
     font-weight: bold;
     font-size: 18px;
+}
+
+#content ul li {
+    margin-bottom: 0.7em;
 }
 
 

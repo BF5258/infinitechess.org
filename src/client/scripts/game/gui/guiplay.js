@@ -110,7 +110,7 @@ const guiplay = (function(){
             element_optionCardColor.classList.remove('hidden')
             element_optionCardRated.classList.remove('hidden')
             element_optionCardPrivate.classList.remove('hidden')
-            const localStorageClock = localstorage.loadItem('clock_online');
+            const localStorageClock = localstorage.loadItem('preferred_online_clock_invite_value');
             element_optionClock.selectedIndex = localStorageClock != null ? localStorageClock : indexOf10m; // 10m+4s
             element_joinPrivate.classList.remove('hidden')
             // callback_updateOptions()
@@ -126,7 +126,7 @@ const guiplay = (function(){
             element_optionCardColor.classList.add('hidden')
             element_optionCardRated.classList.add('hidden')
             element_optionCardPrivate.classList.add('hidden')
-            const localStorageClock = localstorage.loadItem('clock_local');
+            const localStorageClock = localstorage.loadItem('preferred_local_clock_invite_value');
             element_optionClock.selectedIndex = localStorageClock != null ? localStorageClock : indexOfInfiniteTime; // Infinite Time
             element_joinPrivate.classList.add('hidden')
             element_inviteCode.classList.add('hidden')
@@ -187,7 +187,7 @@ const guiplay = (function(){
 
     function savePreferredClockOption(clockIndex) {
         const localOrOnline = modeSelected;
-        localstorage.saveItem(`clock_${localOrOnline}`, clockIndex, math.getTotalMilliseconds({ days: 7 }))
+        localstorage.saveItem(`preferred_${localOrOnline}_clock_invite_value`, clockIndex, math.getTotalMilliseconds({ days: 7 }))
     }
 
     function callback_joinPrivate(event) {
@@ -274,11 +274,14 @@ const guiplay = (function(){
         // console.log(inviteOptions);
         gui.setScreen('game local'); // Change screen location
 
-        const untimedGame = clock.isClockValueInfinite(inviteOptions.clock);
+        // [Event "Casual Space Classic infinite chess game"] [Site "https://www.infinitechess.org/"] [Round "-"]
         const gameOptions = {
             metadata: {
+                Event: `Casual local ${translations[inviteOptions.variant]} infinite chess game`,
+                Site: "https://www.infinitechess.org/",
+                Round: "-",
                 Variant: inviteOptions.variant,
-                Clock: untimedGame ? "Infinite" : inviteOptions.clock
+                TimeControl: inviteOptions.clock
             }
         }
         loadGame(gameOptions)
@@ -293,7 +296,7 @@ const guiplay = (function(){
      * `timerBlack`, `timeNextPlayerLosesAt`, `autoAFKResignTime`,
      * `disconnect`, `gameConclusion`, `serverRestartingAt`
      * 
-     * The `metadata` property contains the properties `Variant`, `White`, `Black`, `Clock`, `Date`, `Rated`.
+     * The `metadata` property contains the properties `Variant`, `White`, `Black`, `TimeControl`, `UTCDate`, `UTCTime`, `Rated`.
      */
     function startOnlineGame(gameOptions) {
         gui.setScreen('game online') // Change screen location
@@ -329,8 +332,7 @@ const guiplay = (function(){
     /**
      * Starts a game according to the options provided.
      * @param {Object} gameOptions - An object that contains the properties `metadata`, `moves`, `gameConclusion`
-
-     * The `metadata` property contains the properties `Variant`, `White`, `Black`, `Clock`, `Date`.
+     * The `metadata` property contains the properties `Variant`, `White`, `Black`, `TimeControl`, `UTCDate`, `UTCTime`.
      */
     function loadGame(gameOptions) {
         console.log("Loading game with game options:")
@@ -339,7 +341,8 @@ const guiplay = (function(){
         movement.eraseMomentum();
         options.disableEM();
 
-        gameOptions.metadata.Date = gameOptions.metadata.Date || math.getUTCDateTime();
+        gameOptions.metadata.UTCDate = gameOptions.metadata.UTCDate || math.getCurrentUTCDate();
+        gameOptions.metadata.UTCTime = gameOptions.metadata.UTCTime || math.getCurrentUTCTime();
 
         const newGamefile = new gamefile(gameOptions.metadata, { // Pass in the pre-existing moves
             moves: gameOptions.moves,
