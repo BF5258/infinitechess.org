@@ -43,6 +43,7 @@ const highlights = (function(){
         renderLegalMoves()
         arrows.renderEachHoveredPiece();
         renderBoundingBoxOfRenderRange();
+        premove.renderHighlights();
     }
 
     function renderLegalMoves() {

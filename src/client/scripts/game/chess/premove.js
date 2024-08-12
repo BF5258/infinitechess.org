@@ -9,7 +9,7 @@ const premove = (function(){
 
     let premovesEnabled = true; //alows the user to make premoves.
 
-    //Have all premoves been applied to gamefile? True because their are currently none.
+    //Have all premoves been applied to the board? True because their are currently none.
     let premovesVisible = true; 
 
     /** Enables or disables premoves.
@@ -22,6 +22,10 @@ const premove = (function(){
         if(!value) clearPremoves(game.getGamefile());
     }
 
+    /**
+     * Has the user enabled premoves?
+     * @returns {boolean}
+     */
     function arePremovesEnabled() {
         return premovesEnabled;
     }
@@ -32,10 +36,11 @@ const premove = (function(){
      */
     let premoves = [];
 
-    /** A list of squares that pieces have premoved into or out of.
-     * @type{number[][]}
+    /** 
+     * The number of times each square has been premoved through, stored by key: `{'5,7': 1, '5,5': 1}`
+     * @type{Object<string, number>}
      */
-    let highlightedSquares = [];
+    let highlightedSquares = {};
 
     /**
      * Submits the next premove to the server if it is legal;
@@ -83,15 +88,19 @@ const premove = (function(){
             clearPremoves(gamefile);
             return;
         }
+
+        //Remove the highlight as the move is no longer a premove.
+        removeSquareHighlight(premove.startCoords); 
     }
 
     /**
-     * 
-     * @param {Gamefile} gamefile 
-     * @param {Move} move 
-     * @returns 
+     * Checks if `move` is legal. If so, it can be submitted to the server.
+     * @param {Gamefile} gamefile - the gamefile
+     * @param {Move} move - the move to check
+     * @returns {boolean}
      */
     function isMoveLegal(gamefile, move) {
+        if(!onlinegame.isItOurTurn()) return false;
         let piece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
         if(piece.type != move.type)
             return false; //The piece we had premoved no longer exists
@@ -99,15 +108,42 @@ const premove = (function(){
         return legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
     }
     
+    /**
+     * Highlights a square with the premove highlight color.
+     * @param {number[]} coords - The coordinates to highlight: `[x,y]`
+     */
+    function addSquareHighlight(coords) {
+        const key = math.getKeyFromCoords(coords);
+        highlightedSquares[key]??= 0;
+        highlightedSquares[key]++;
+    }
 
     /** Remove premove highlight from a square.
      * @pram {number[]} coords - The coordinates of the square to un-highlight
      */
     function removeSquareHighlight(coords) {
-        let highlighedSquareIndex = highlightedSquares.indexOf(coords)
-        if (highlighedSquareIndex < 0)
+        const key = math.getKeyFromCoords(coords);
+        if(!(highlightedSquares[key]>0)) //`!(a>0)` is true if a is undefined. `a<=0` is not.
             return console.error("Cannot remove highlight as it was never added.");
-        highlightedSquares.splice(highlighedSquareIndex, 1);
+        if(--highlightedSquares[key]<=0) delete highlightedSquares[key];
+    }
+
+    function clearAllSquareHighlights() {
+        highlightedSquares = {};
+    }
+
+    function  renderHighlights() {
+        const defaultColor = options.getDefaultPremoveHighlightColor();
+        let color = defaultColor.slice();
+        const data = [];
+        for (const key in highlightedSquares) {
+            const coords = math.getCoordsFromKey(key);
+            const intensity = highlightedSquares[key];
+            color[3] = 1 - Math.pow(1 - defaultColor[3], intensity); //Squares that have been moved through multiple times are more opaque. 
+            data.push(...bufferdata.getDataQuad_Color3D_FromCoord(coords, -0.005, color))
+        }
+        const model = buffermodel.createModel_Colored(new Float32Array(data), 3, "TRIANGLES");
+        model.render();
     }
 
     /** Adds a premove to the queue.
@@ -122,6 +158,10 @@ const premove = (function(){
         premoves.push(move);
         movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, simulated: true, doGameOverChecks: false, concludeGameIfOver: false, updateProperties:false, isPremove: true})
 
+        //Only highlight the start square if this is the first premove.
+        //Otherwise, it should be already highlighted by the previous premove.
+        if(premoves.length === 1) addSquareHighlight(move.startCoords);
+        addSquareHighlight(move.endCoords);
     }
 
     /** Sends all premoved pieces back to their original positions then clears the queue of premoves. */
@@ -130,7 +170,7 @@ const premove = (function(){
         if (premovesVisible) rewindPremoves(gamefile);
         premovesVisible = true; //All premoves are visible on the board; there just happens to be none.
         premoves = [];
-        highlightedSquares = [];
+        clearAllSquareHighlights();
     }
 
     /**
@@ -178,6 +218,7 @@ const premove = (function(){
         rewindPremoves,
         showPremoves,
         clearPremoves,
+        renderHighlights,
         submitPremove,
         allowPremoves,
         arePremovesEnabled,

@@ -194,6 +194,10 @@ const options = (function() {
         return themes[theme].checkHighlightColor;
     }
 
+    function getDefaultPremoveHighlightColor() {
+        return themes[theme].premoveHighlightColor;
+    }
+
     function setTheme(newTheme) { // default/halloween
         if (!validateTheme(theme)) console.error(`Cannot change theme to invalid theme ${theme}!`)
 
@@ -272,6 +276,7 @@ const options = (function() {
         getDefaultSelectedPieceHighlight,
         getDefaultLastMoveHighlightColor,
         getDefaultCheckHighlightColor,
+        getDefaultPremoveHighlightColor,
         setTheme,
         toggleChristmasTheme,
         getPieceRegenColorArgs,
