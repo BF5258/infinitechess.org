@@ -321,9 +321,14 @@ const onlinegame = (function(){
         if (!inOnlineGame) return;
         const moveAndConclusion = { move: message.move, gameConclusion: message.gameConclusion }
         
+        const gamefile = game.getGamefile();
+
+        //Remove premoves from the board. They will be put back later.
+        movepiece.forwardToFront(gamefile, { animateLastMove: false, updateProperties: false })
+        premove.rewindPremoves(gamefile, { removeMove: true });
+
         // Make sure the move number matches the expected.
         // Otherwise, we need to re-sync
-        const gamefile = game.getGamefile();
         const expectedMoveNumber = gamefile.moves.length + 1;
         if (message.moveNumber !== expectedMoveNumber) {
             console.log(`We have desynced from the game. Resyncing... Expected opponent's move number: ${expectedMoveNumber}. Actual: ${message.moveNumber}. Opponent's whole move: ${JSON.stringify(moveAndConclusion)}`)
@@ -347,8 +352,6 @@ const onlinegame = (function(){
         if (moveIsLegal !== true) console.log(`Buddy made an illegal play: ${JSON.stringify(moveAndConclusion)}`)
         if (moveIsLegal !== true && !isPrivate) return reportOpponentsMove(moveIsLegal); // Allow illegal moves in private games
 
-        movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false })
-
         // Forward the move...
 
         const piecemoved = gamefileutility.getPieceAtCoords(gamefile, move.startCoords)
@@ -371,7 +374,11 @@ const onlinegame = (function(){
         flashTabNameYOUR_MOVE(true);
         scheduleMoveSound_timeoutID();
 
+        
         premove.submitPremove();
+
+        premove.showPremoves(gamefile);
+
     }
 
     function flashTabNameYOUR_MOVE(on) {
@@ -458,6 +465,9 @@ const onlinegame = (function(){
      * @returns {boolean} *false* if it detected an illegal move played by our opponent.
      */
     function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
+        //Remove premoves from the board so other code doesn't get confused.
+        //They will be put back later.
+        premove.rewindPremoves(gamefile);
 
         // Early exit case. If we have played exactly 1 more move than the server,
         // and the rest of the moves list matches, don't modify our moves,
@@ -527,8 +537,14 @@ const onlinegame = (function(){
             aChangeWasMade = true;
         }
 
-        if (!aChangeWasMade) movepiece.rewindGameToIndex(gamefile, originalMoveIndex, { removeMove: false })
-
+        if (aChangeWasMade) {
+            //If the game is different to what the player thought it was, they might want to make a different move.
+            premove.clearPremoves(); 
+        } else {
+            movepiece.rewindGameToIndex(gamefile, originalMoveIndex, { removeMove: false });
+            premove.showPremoves(gamefile);
+        }
+        
         return true; // No cheating detected
     }
 

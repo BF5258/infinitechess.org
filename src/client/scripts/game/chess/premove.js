@@ -9,6 +9,9 @@ const premove = (function(){
 
     let premovesEnabled = true; //alows the user to make premoves.
 
+    //Have all premoves been applied to gamefile? True because their are currently none.
+    let premovesVisible = true; 
+
     /** Enables or disables premoves.
      * @param {boolean} value - Are premoves allowed? 
      * - True: enable premoves
@@ -16,7 +19,7 @@ const premove = (function(){
      */
     function allowPremoves(value) {
         premovesEnabled = value;
-        if(!value) clearPremoves();
+        if(!value) clearPremoves(game.getGamefile());
     }
 
     function arePremovesEnabled() {
@@ -34,13 +37,6 @@ const premove = (function(){
      */
     let highlightedSquares = [];
 
-    /** 
-     * Stores all of the pieces that have been moved to a position different from gamefile. 
-     * Actually moving the pieces would confuse legality checks and/or checkmate detection.
-     * 
-     */
-    let movedPieces = [];
-
     /**
      * Submits the next premove to the server if it is legal;
      * otherwise, deletes the queue.
@@ -49,7 +45,10 @@ const premove = (function(){
      * otherwise the move is deemed illegal.
      */
     function submitPremove() {
-        
+        if(premovesVisible) {
+            throw "The premoves are still displayed on the board remove them first";
+        }
+        let gamefile = game.getGamefile();
         /**
          * The piece is unselected to prevent bugs where the player selects a moves that is no longer legal but was still displayed.
          * Ideally the following should be done instead:
@@ -67,63 +66,39 @@ const premove = (function(){
         let premove = premoves.shift();
         
         //check if the premove is legal
-        let gamefile = game.getGamefile();
-        let piece = gamefileutility.getPieceAtCoords(gamefile, premove.startCoords);
-        let legalMoves = legalmoves.calculate(gamefile, piece);
-        let premoveLegal = legalmoves.checkIfMoveLegal(legalMoves, premove.startCoords, premove.endCoords);
         
-        if (!premoveLegal)
+        if (!isMoveLegal(gamefile, premove))
         {
             //If this premove was innvalid all subsequent premoves are also invalid.
-            clearPremoves();
+            clearPremoves(gamefile);
             return;
         }
-        movepiece.makeMove(game.getGamefile(), premove)
+
+        movepiece.makeMove(game.getGamefile(), premove);
         onlinegame.sendMove();
 
         //If the last premove in the queue was just made,
-        //clear all highlighted sqares and movedPieces.
+        //clear all highlighted sqares.
         if(!premoves) {
-            clearPremoves();
+            clearPremoves(gamefile);
             return;
         }
+    }
 
-        if(math.areCoordsEqual(piece.coords, piece.premovedCoords)) {
-            if (math.areCoordsEqual(piece.premovedCoords, premove.endCoords))
-            {
-                movedPieces.splice(movedPieces.indexOf(piece), 2);
-                //Un-highlight the square the piece moved to as the piece is in its final position
-                removeSquareHighlight(premove.endCoords);
-            } else {
-                pieceTranslation.startCoords = premove.endCoords;
-            }
-        }
-
-        //Un-highlight the square the piece moved from
-        removeSquareHighlight(premove.startCoords);
+    /**
+     * 
+     * @param {Gamefile} gamefile 
+     * @param {Move} move 
+     * @returns 
+     */
+    function isMoveLegal(gamefile, move) {
+        let piece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
+        if(piece.type != move.type)
+            return false; //The piece we had premoved no longer exists
+        let legalMoves = legalmoves.calculate(gamefile, piece);
+        return legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
     }
     
-    /**
-     * Move the visual position of the piece if premoves are shown.
-     * @param {Piece} piece - The piece to premove.
-     * @param {number[] | null} newCoords - The coordinates to move the piece to. *null* if the piece was captured.
-     */
-    function premovePiece(piece, newCoords) {
-        if(newCoords) {
-            
-            let capturedPiece = getPieceAtCoords(newCoords);
-            if (capturedPiece) premovePiece(capturedPiece, null);
-
-            //Update the visual position of the piece.
-            piecesmodel.movebufferdata(game.getGamefile(), piece, newCoords);
-        } else {
-            //The piece was captured. Remove it.
-            piecesmodel.deletebufferdata(game.getGamefile(), piece);
-        }
-
-        piece.premovedCoords = newCoords;
-        movedPieces.push(piece);
-    }
 
     /** Remove premove highlight from a square.
      * @pram {number[]} coords - The coordinates of the square to un-highlight
@@ -139,83 +114,50 @@ const premove = (function(){
      * @param {Piece} piece - the piece that was moved
      * @param {Move} move - the move the piece made
     */
-    function makePremove(piece, move) {
+    function makePremove(gamefile, move) {
         if (!premovesEnabled)
             return;
         if (main.devBuild) console.log("A premove was made.");
+        
         premoves.push(move);
+        movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, simulated: true, doGameOverChecks: false, concludeGameIfOver: false, updateProperties:false, isPremove: true})
 
-        let trimmedType = math.trimWorBFromType(piece.type);
-        let specialMoveMade;
-        let gamefile = game.getGamefile();
-        if(gamefile.specialMoves[trimmedType]) 
-            specialMoveMade = game.getGamefile().specialMoves[trimmedType](gamefile, piece, move, { isPremove:true });
-
-        if (!specialMoveMade) premovePiece(piece, move.endCoords);
-
-        highlightedSquares.push(move.endCoords);
     }
 
     /** Sends all premoved pieces back to their original positions then clears the queue of premoves. */
-    function clearPremoves()
+    function clearPremoves(gamefile)
     {
-        hidePremoves();
+        if (premovesVisible) rewindPremoves(gamefile);
+        premovesVisible = true; //All premoves are visible on the board; there just happens to be none.
         premoves = [];
-        movedPieces = [];
         highlightedSquares = [];
     }
 
-    /** Displays premoved pieces in their new positions. */
-    function showPremoves() {
-        if(!premoves) return;
-        let gamefile = game.getGamefile();
-        for (let movedPiece of Object.values(movedPieces)) {
-            if(movedPiece.premovedCoords)
-                piecesmodel.movebufferdata(gamefile, movedPiece, movedPiece.premovedCoords);
-            else if(movedPiece.premovedCoords == null)
-                piecesmodel.deletebufferdata(gamefile, movedPiece);
-            else
-                console.error("Premoved coordinates undefined.");
-        }
-    }
-
-    /** Sends all pieces back to their original positions. */
-    function hidePremoves() {
-        if(!premoves) return;
-        let gamefile = game.getGamefile();
-        for (const movedPiece of Object.values(movedPieces)) {
-            if(movedPiece.premovedCoords) {
-                piecesmodel.movebufferdata(gamefile, movedPiece, movedPiece.coords);
-            } else if (movedPiece.premovedCoords === null) {
-                piecesmodel.overwritebufferdata(
-                    gamefile, 
-                    movedPiece, 
-                    movedPiece.coords, 
-                    movedPiece.type);
-            } else {
-                console.error("Premoved coordinates undefined.");
-            }
-        }
-    }
-
     /**
-     * Returns piece that has been premoved to `coords`. 
      * 
-     * If no piece has been premoved to `coords` forwards the request to `gamefileutility`
-     * @param {number[]} coords - The coordinates of the pieces: `[x,y]`
-     * @returns {Piece} The piece at `coords` if there is one.
+     * @param {Gamefile} gamefile 
+     * @param {Object} params 
      */
-    function getPieceAtCoords(coords) {
-        let pieceGone = false; //Has the piece moved away or been captured?
-        for (let movedPiece of Object.values(movedPieces)) {
-            if (math.areCoordsEqual(movedPiece.premovedCoords, coords)) {
-                return movedPiece;
-            }
-            if (math.areCoordsEqual(movedPiece.coords, coords)) {
-                pieceGone = true;
-            }
+    function rewindPremoves(gamefile, {updateData = true} = {}) {
+        if(!premovesVisible) {
+            if(options.devBuild) console.log("Premoves are already hidden.");
+            return;
         }
-        return pieceGone?undefined:gamefileutility.getPieceAtCoords(game.getGamefile(), coords);
+        premovesVisible = false;
+        movepiece.forwardToFront(gamefile, { updateData });
+        for(let i=0; i<premoves.length; i++)
+            movepiece.rewindMove(gamefile, { updateData, animate: false, flipTurn: false })
+    }
+
+    function showPremoves(gamefile) {
+        if(premovesVisible) {
+            if(options.devBuild) console.log("Premoves are already shown.");
+            return;
+        }
+        premovesVisible = true;
+        for(let move of premoves) {
+            movepiece.makeMove(gamefile, move, {flipTurn: false, doGameOverChecks: false, animate: false});
+        }
     }
 
     /**Returns *true* if we are currently makeing a premove.*/
@@ -233,16 +175,14 @@ const premove = (function(){
 
     return Object.freeze({
         makePremove,
-        clearPremoves,
-        hidePremoves,
+        rewindPremoves,
         showPremoves,
+        clearPremoves,
         submitPremove,
-        premovePiece,
         allowPremoves,
         arePremovesEnabled,
         getPremoveCount,
         isPremove,
-        getPieceAtCoords
     });
 
 })();

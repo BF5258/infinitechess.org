@@ -88,7 +88,7 @@ const selection = (function() {
 
         if (!input.getMouseClicked() && !input.getTouchClicked()) return; // Exit, we did not click
 
-        const pieceClicked = premove.getPieceAtCoords(hoverSquare);
+        const pieceClicked = gamefileutility.getPieceAtCoords(gamefile, hoverSquare);
 
         if (pieceSelected) handleMovingSelectedPiece(hoverSquare, pieceClicked) // A piece is already selected. Test if it was moved.
         else if (pieceClicked) handleSelectingPiece(pieceClicked);
@@ -171,7 +171,7 @@ const selection = (function() {
         const clickedPieceIndex = gamefileutility.getPieceIndexByTypeAndCoords(gamefile, pieceClicked.type, hoverSquare)
 
         // Select the piece
-        selectPiece(pieceClicked.type, pieceClicked.index, hoverSquare)
+        selectPiece(pieceClicked.type, clickedPieceIndex, hoverSquare)
     }
 
     /**
@@ -217,12 +217,12 @@ const selection = (function() {
         specialdetect.transferSpecialFlags_FromCoordsToMove(coords, move);
         const compact = formatconverter.LongToShort_CompactMove(move);
         move.compact = compact;
-        let gameFile = game.getGamefile();
+        let gamefile = game.getGamefile();
         if (!onlinegame.areInOnlineGame() || onlinegame.isItOurTurn(gamefile)) {
-            movepiece.makeMove(gameFile, move);
+            movepiece.makeMove(gamefile, move);
             onlinegame.sendMove();
         } else {
-            premove.makePremove(pieceSelected, move);
+            premove.makePremove(gamefile, move);
         }
 
         unselectPiece();

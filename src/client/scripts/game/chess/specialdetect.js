@@ -91,10 +91,8 @@ const specialdetect = (function() {
         // The square the king lands on will be tested later, within  legalmoves.calculate()
 
         const oppositeColor = math.getOppositeColor(color)
-        tag: if (wincondition.doesColorHaveWinCondition(gamefile, oppositeColor, 'checkmate')) {
+        if (wincondition.doesColorHaveWinCondition(gamefile, oppositeColor, 'checkmate') && !isPremove) {
             if (gamefile.inCheck) return; // Not legal if in check
-
-            if (isPremove) break tag;
 
             // Simulate the space in-between
 

@@ -30,8 +30,7 @@ const movepiece = (function(){
      * - `updateProperties`: Whether to update gamefile properties that game-over algorithms rely on, such as the 50-move-rule's status, or 3-Check's check counter.
      * - `simulated`: Whether you plan on undo'ing this move. If true, the `rewindInfo` property will be added to the `move` for easy restoring of the gamefile's properties when undo'ing the move.
      */
-    function makeMove(gamefile, move, { flipTurn = true, recordMove = true, pushClock = true, doGameOverChecks = true, concludeGameIfOver = true, animate = true, updateData = true, updateProperties = true, simulated = false, isPremove = false} = {}) {                
-        //if(isPremove) return premove.makePremove(move);
+    function makeMove(gamefile, move, { flipTurn = true, recordMove = true, pushClock = true, doGameOverChecks = true, concludeGameIfOver = true, animate = true, updateData = true, updateProperties = true, simulated = false } = {}) {
         const piece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
         if (!piece) throw new Error(`Cannot make move because no piece exists at coords ${move.startCoords}.`)
         move.type = piece.type;
@@ -144,9 +143,7 @@ const movepiece = (function(){
      * @param {number[]} endCoords - The destination coordinates
      * @param {Object} options - An object that may contain the property `updateData`, that when true will update the piece in the mesh.
      */
-    function movePiece(gamefile, piece, endCoords, { updateData = true, isPremove = false } = {}) {
-        if(isPremove) return premove.premovePiece(piece, endCoords);
-        
+    function movePiece(gamefile, piece, endCoords, { updateData = true } = {}) {
         // Move the piece, change the coordinates
         gamefile.ourPieces[piece.type][piece.index] = endCoords
 
@@ -169,9 +166,7 @@ const movepiece = (function(){
      * @param {number} [desiredIndex] - Optional. If specified, this will place the piece at that index within the gamefile's piece list. This is crucial for undo'ing simulated moves so as to not screw up the mesh.
      * @param {Object} options - An object that may contain the property `updateData`, that when true will update the piece in the mesh.
      */
-    function addPiece(gamefile, type, coords, desiredIndex, { updateData = true, isPremove = false } = {}) { // desiredIndex optional
-        if(isPremove) return;
-
+    function addPiece(gamefile, type, coords, desiredIndex, { updateData = true } = {}) { // desiredIndex optional
         const list = gamefile.ourPieces[type];
 
         // If no index specified, make the default the first undefined in the list!
@@ -215,8 +210,7 @@ const movepiece = (function(){
      * @param {number} [desiredIndex] - Optional. If specified, this will place the piece at that index within the gamefile's piece list. This is crucial for undo'ing simulated moves so as to not screw up the mesh.
      * @param {Object} options - An object that may contain the property `updateData`, that when true will update the piece in the mesh.
      */
-    function deletePiece(gamefile, piece, { updateData = true, isPremove = false } = {}) { // piece: { type, index }
-        if(isPremove) return premove.premovePiece(piece);
+    function deletePiece(gamefile, piece, { updateData = true } = {}) { // piece: { type, index }
 
         const list = gamefile.ourPieces[piece.type];
         gamefileutility.deleteIndexFromPieceList(list, piece.index)
@@ -385,7 +379,6 @@ const movepiece = (function(){
 
         // If updateData is true, lock the rewind/forward buttons for a brief moment.
         if (updateData) {
-            premove.showPremoves();
             guinavigation.lockRewind();
         }
         // CREATES BUGS with sometimes games being aborted from illegal play because
@@ -422,7 +415,7 @@ const movepiece = (function(){
      * - `removeMove`: Whether to delete the move from the gamefile's move list. Should be true if we're undo'ing simulated moves.
      * - `animate`: Whether to animate this rewinding.
      */
-    function rewindMove(gamefile, { updateData = true, removeMove = true, animate = true } = {}) {
+    function rewindMove(gamefile, { updateData = true, removeMove = true, animate = true, flipTurn = true } = {}) {
 
         const move = movesscript.getMoveFromIndex(gamefile.moves, gamefile.moveIndex) // { type, startCoords, endCoords, captured }
         const trimmedType = math.trimWorBFromType(move.type)
@@ -457,7 +450,7 @@ const movepiece = (function(){
         if (removeMove) movesscript.deleteLastMove(gamefile.moves);
         gamefile.moveIndex--;
 
-        if (removeMove) flipWhosTurn(gamefile, { pushClock: false, doGameOverChecks: false })
+        if (removeMove && flipTurn) flipWhosTurn(gamefile, { pushClock: false, doGameOverChecks: false })
 
         // if (animate) updateInCheck(gamefile, false)
         // No longer needed, as rewinding the move restores the inCheck property.
