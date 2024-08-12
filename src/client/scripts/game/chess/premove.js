@@ -46,7 +46,7 @@ const premove = (function(){
      */
     function submitPremove() {
         if(premovesVisible) {
-            throw "The premoves are still displayed on the board remove them first";
+            return console.error("The premoves are still displayed on the board. Call `rewindPremoves` first.");
         }
         let gamefile = game.getGamefile();
         /**
