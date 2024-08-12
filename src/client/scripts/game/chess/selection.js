@@ -97,10 +97,10 @@ const selection = (function() {
 
         if (!input.getMouseClicked() && !input.getTouchClicked()) return; // Exit, we did not click
 
-        const pieceClicked = gamefileutility.getPieceAtCoords(gamefile, hoverSquare);
+        const pieceClickedType = gamefileutility.getPieceTypeAtCoords(gamefile, hoverSquare)
 
-        if (pieceSelected) handleMovingSelectedPiece(hoverSquare, pieceClicked) // A piece is already selected. Test if it was moved.
-        else if (pieceClicked) handleSelectingPiece(pieceClicked);
+        if (pieceSelected) handleMovingSelectedPiece(hoverSquare, pieceClickedType) // A piece is already selected. Test if it was moved.
+        else if (pieceClickedType) handleSelectingPiece(pieceClickedType);
         // Else we clicked, but there was no piece to select, *shrugs*
     }
 
@@ -110,10 +110,10 @@ const selection = (function() {
      * or it will select a different piece if you clicked another piece.
      * @param {Piece} pieceClicked
      */
-    function handleMovingSelectedPiece(coordsClicked, pieceClicked) {
+    function handleMovingSelectedPiece(coordsClicked, pieceClickedType) {
         const gamefile = game.getGamefile();
 
-        tag: if (pieceClicked) {
+        tag: if (pieceClickedType) {
 
             // Did we click a friendly piece?
             // const selectedPieceColor = math.getPieceColorFromType(pieceSelected.type)
@@ -125,8 +125,8 @@ const selection = (function() {
                 unselectPiece();
             } else if (hoverSquareLegal) { // This piece is capturable, don't select it instead
                 break tag;
-            } else if (pieceClicked.type !== 'voidsN') { // Select that other piece instead. Prevents us from selecting a void after selecting an obstacle.
-                handleSelectingPiece(pieceClicked);
+            } else if (pieceClickedType !== 'voidsN') { // Select that other piece instead. Prevents us from selecting a void after selecting an obstacle.
+                handleSelectingPiece(pieceClickedType);
             }
 
             return;
@@ -137,7 +137,8 @@ const selection = (function() {
 
         // If it's a premove, hoverSquareLegal should not be true at this point unless
         // we are actually starting to implement premoving.
-        if (isPremove) throw new Error("Don't know how to premove yet! Will not submit move normally.");
+        //if (isPremove) throw new Error("Don't know how to premove yet! Will not submit move normally.");
+        // We are.
 
         // Don't move the piece if the mesh is locked, because it will mess up the mesh generation algorithm.
         if (gamefile.mesh.locked) return statustext.pleaseWaitForTask(); 
@@ -159,7 +160,7 @@ const selection = (function() {
      * you to the game's front if your viewing past moves.
      * @param {Piece} pieceClicked
      */
-    function handleSelectingPiece(pieceClicked) {
+    function handleSelectingPiece(pieceClickedType) {
         const gamefile = game.getGamefile();
 
         // If we're viewing history, return. But also if we clicked a piece, forward moves.
@@ -176,12 +177,12 @@ const selection = (function() {
 
         // if (clickedPieceColor !== gamefile.whosTurn && !options.getEM()) return; // Don't select opposite color
         if (hoverSquareLegal) return; // Don't select different piece if the move is legal (its a capture)
-        if (options.getEM() && pieceClicked.type === 'voidsN') return; // Don't select voids.
+        if (options.getEM() && pieceClickedType === 'voidsN') return; // Don't select voids.
 
-        const clickedPieceIndex = gamefileutility.getPieceIndexByTypeAndCoords(gamefile, pieceClicked.type, hoverSquare)
+        const clickedPieceIndex = gamefileutility.getPieceIndexByTypeAndCoords(gamefile, pieceClickedType, hoverSquare)
 
         // Select the piece
-        selectPiece(pieceClicked.type, clickedPieceIndex, hoverSquare)
+        selectPiece(pieceClickedType, clickedPieceIndex, hoverSquare)
     }
 
     /**
@@ -289,8 +290,9 @@ const selection = (function() {
         const hoverSquareIsVoid = !hoverSquareIsSameColor && typeAtHoverCoords === 'voidsN';
         // The next boolean ensures that only pieces of the same color as the current player's turn can have a ghost piece:
         const selectionColorAgreesWithMoveTurn = math.getPieceColorFromType(pieceSelected.type) === gamefile.whosTurn;
+        const canPremove = isPremove && premove.arePremovesEnabled() && !onlinegame.isItOurTurn();
         // This will also subtley transfer any en passant capture tags to our `hoverSquare` if the function found an individual move with the tag.
-        hoverSquareLegal = (selectionColorAgreesWithMoveTurn && !isOpponentPiece && legalmoves.checkIfMoveLegal(legalMoves, pieceSelected.coords, hoverSquare)) || (options.getEM() && !hoverSquareIsVoid && !hoverSquareIsSameColor)
+        hoverSquareLegal = ((selectionColorAgreesWithMoveTurn || canPremove) && !isOpponentPiece && legalmoves.checkIfMoveLegal(legalMoves, pieceSelected.coords, hoverSquare)) || (options.getEM() && !hoverSquareIsVoid && !hoverSquareIsSameColor)
     }
 
     /** Renders the translucent piece underneath your mouse when hovering over the blue legal move fields. */
