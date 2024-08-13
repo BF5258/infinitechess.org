@@ -84,7 +84,7 @@ const premove = (function(){
 
         //If the last premove in the queue was just made,
         //clear all highlighted sqares.
-        if(!premoves) {
+        if(!premoves.length) {
             clearPremoves(gamefile);
             return;
         }
