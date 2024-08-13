@@ -111,11 +111,12 @@ const premove = (function(){
     /**
      * Highlights a square with the premove highlight color.
      * @param {number[]} coords - The coordinates to highlight: `[x,y]`
+     * @param {number} max - Maximum number of times to highlight the square.
      */
-    function addSquareHighlight(coords) {
+    function addSquareHighlight(coords, max=Infinity) {
         const key = math.getKeyFromCoords(coords);
         highlightedSquares[key]??= 0;
-        highlightedSquares[key]++;
+        if(highlightedSquares[key]<max) highlightedSquares[key]++;
     }
 
     /** Remove premove highlight from a square.
@@ -158,9 +159,9 @@ const premove = (function(){
         premoves.push(move);
         movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, simulated: true, doGameOverChecks: false, concludeGameIfOver: false, updateProperties:false, isPremove: true})
 
-        //Only highlight the start square if this is the first premove.
-        //Otherwise, it should be already highlighted by the previous premove.
-        if(premoves.length === 1) addSquareHighlight(move.startCoords);
+        //Only highlight the start square on the first premove of each piece.
+        //Otherwise, it was already highlighted when the previous premove was made.
+        addSquareHighlight(move.startCoords, 1);
         addSquareHighlight(move.endCoords);
     }
 
