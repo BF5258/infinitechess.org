@@ -157,7 +157,8 @@ const premove = (function(){
         if (main.devBuild) console.log("A premove was made.");
         
         premoves.push(move);
-        movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, simulated: true, doGameOverChecks: false, concludeGameIfOver: false, updateProperties:false, isPremove: true})
+
+        if(premovesVisible) movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, simulated: true, doGameOverChecks: false, concludeGameIfOver: false, updateProperties:false, isPremove: true})
 
         //Only highlight the start square on the first premove of each piece.
         //Otherwise, it was already highlighted when the previous premove was made.
