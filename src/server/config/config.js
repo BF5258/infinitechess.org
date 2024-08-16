@@ -25,7 +25,7 @@ const AUTO_AFK_RESIGN = false || !DEV_BUILD;
  * 
  * THIS SHOULD ALWAYS MATCH protected-owner/scripts/game/main/GAME_VERSION
  */
-const GAME_VERSION = "1.4"
+const GAME_VERSION = "1.4";
 
 /** Whether we are currently using a whitelist for connections from other origins.
  * If we are getting unwanted origins, this can be enabled. */
@@ -44,4 +44,4 @@ module.exports = {
     GAME_VERSION,
     useOriginWhitelist,
     allowedOrigins
-}
+};
