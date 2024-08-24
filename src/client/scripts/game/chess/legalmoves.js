@@ -122,7 +122,7 @@ const legalmoves = (function() {
             sliding: legalSliding
         };
         
-        checkdetection.removeMovesThatPutYouInCheck(gamefile, moves, piece, color);
+        if(!isPremove) checkdetection.removeMovesThatPutYouInCheck(gamefile, moves, piece, color);
 
         return moves;
     }

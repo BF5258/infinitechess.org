@@ -350,7 +350,7 @@ const onlinegame = (function() {
 
         //Remove premoves from the board. They will be put back later.
         movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
-        premove.rewindPremoves(gamefile);
+        premove.hidePremoves(gamefile);
 
         // Make sure the move number matches the expected.
         // Otherwise, we need to re-sync
@@ -402,7 +402,7 @@ const onlinegame = (function() {
         scheduleMoveSound_timeoutID();
 
         
-        premove.submitPremove();
+        premove.submitPremove(gamefile);
 
         premove.showPremoves(gamefile);
 
@@ -495,9 +495,12 @@ const onlinegame = (function() {
      * @returns {boolean} *false* if it detected an illegal move played by our opponent.
      */
     function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
+        
+        const originalMoveIndex = gamefile.moveIndex;
+        const originalPremovesVisible = gamefile.premovesVisible;
         //Remove premoves from the board so other code doesn't get confused.
         //They will be put back later.
-        premove.rewindPremoves(gamefile);
+        if(gamefile.premovesVisible) premove.hidePremoves(gamefile);
 
         // Early exit case. If we have played exactly 1 more move than the server,
         // and the rest of the moves list matches, don't modify our moves,
@@ -510,8 +513,6 @@ const onlinegame = (function() {
             return sendMove();
         }
 
-        const originalMoveIndex = gamefile.moveIndex;
-        movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
         let aChangeWasMade = false;
 
         while (gamefile.moves.length > moves.length) { // While we have more moves than what the server does..
@@ -568,11 +569,11 @@ const onlinegame = (function() {
         }
 
         if (aChangeWasMade) {
-            premove.clearPremoves(); //If the game is different to what the player thought it was, they might want to make a different move. 
+            premove.clearPremoves(gamefile); //If the game is different to what the player thought it was, they might want to make a different move. 
             selection.reselectPiece(); // Reselect the selected piece from before we resynced. Recalc its moves and recolor it if needed.
         } else {
+            if(originalPremovesVisible) premove.showPremoves(gamefile);
             movepiece.rewindGameToIndex(gamefile, originalMoveIndex, { removeMove: false });
-            premove.showPremoves(gamefile);
         }
 
         return true; // No cheating detected

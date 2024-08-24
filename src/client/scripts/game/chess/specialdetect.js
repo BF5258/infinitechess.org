@@ -41,6 +41,8 @@ const specialdetect = (function() {
     function kings(gamefile, coords, color, individualMoves, isPremove=false) {
         if (!doesPieceHaveSpecialRight(gamefile, coords)) return; // King doesn't have castling rights
 
+        if (isPremove) return; //TODO
+
         const x = coords[0];
         const y = coords[1];
         const key = organizedlines.getKeyFromLine([1,0],coords);
