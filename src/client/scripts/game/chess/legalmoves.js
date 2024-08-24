@@ -71,13 +71,13 @@ const legalmoves = (function() {
      * Calculates the legal moves of the provided piece in the provided gamefile.
      * @param {gamefile} gamefile - The gamefile
      * @param {Piece} piece - The piece: `{ type, coords, index }`
-     * @param {Object} options - An object that may contains options.
+     * @param {Object} options - An object that may contain options.
      * - `onlyCalcSpecials`: When *true*, will only calculate the legal special moves of the piece. Default: *false*
      * - `isPremove`: Allows pieces to move through and into others. Used when premoving.
      * @returns {LegalMoves} The legalmoves object with the properties `individual`, `horizontal`, `vertical`, `diagonalUp`, `diagonalDown`.
      */
     function calculate(gamefile, piece, { onlyCalcSpecials = false, isPremove = false } = {}) { // piece: { type, coords }
-        if (piece.index == null) throw new Error("To calculate a piece's legal moves, we must have the index property.");
+        if (piece.index === undefined) throw new Error("To calculate a piece's legal moves, we must have the index property.");
         const coords = piece.coords;
         const type = piece.type;
         const trimmedType = math.trimWorBFromType(type);
@@ -179,7 +179,7 @@ const legalmoves = (function() {
         // The default slide is [-Infinity, Infinity], change that if there are any pieces blocking our path!
 
         // For most we'll be comparing the x values, only exception is the vertical lines.
-        const axis = direction[0] == 0 ? 1 : 0; 
+        const axis = direction[0] === 0 ? 1 : 0; 
         const limit = math.copyCoords(slideMoveset);
         // Iterate through all pieces on same line
         for (let i = 0; i < line.length; i++) {

@@ -3,6 +3,7 @@
 
 "use strict";
 
+// eslint-disable-next-line no-unused-vars
 const onlinegame = (function() {
 
     /** Whether we are currently in an online game. */
@@ -12,6 +13,11 @@ const onlinegame = (function() {
     /** Whether the game is a private one (joined from an invite code). */
     let isPrivate;
     let ourColor; // white/black
+    /**
+     * Different from gamefile.gameConclusion, because this is only true if {@link gamefileutility.concludeGame}
+     * has been called, which IS ONLY called once the SERVER tells us the result of the game, not us!
+     */
+    let gameHasConcluded;
 
     /** 
      * Whether we are in sync with the game on the server.
@@ -79,6 +85,13 @@ const onlinegame = (function() {
 
     function getOurColor() { return ourColor; }
 
+    /**
+     * Different from {@link gamefileutility.isGameOver}, because this only returns true if {@link gamefileutility.concludeGame}
+     * has been called, which IS ONLY called once the SERVER tells us the result of the game, not us!
+     * @returns {boolean}
+     */
+    function hasGameConcluded() { return gameHasConcluded; }
+
     function setInSyncFalse() { inSync = false; }
 
     function update() {
@@ -135,8 +148,8 @@ const onlinegame = (function() {
     }
 
     function displayWeAFK(secsRemaining) {
-        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations["onlinegame"]["auto_resigning_in"] : translations["onlinegame"]["auto_aborting_in"];
-        statustext.showStatusForDuration(`${translations["onlinegame"]["afk_warning"]} ${resigningOrAborting} ${secsRemaining}...`, 1000);
+        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations.onlinegame.auto_resigning_in : translations.onlinegame.auto_aborting_in;
+        statustext.showStatusForDuration(`${translations.onlinegame.afk_warning} ${resigningOrAborting} ${secsRemaining}...`, 1000);
         const nextSecsRemaining = secsRemaining - 1;
         if (nextSecsRemaining === 0) return; // Stop
         const timeRemainUntilAFKLoss = afk.timeWeLoseFromAFK - Date.now();
@@ -188,7 +201,7 @@ const onlinegame = (function() {
                 const message = data.value; // { timerWhite, timerBlack, timeNextPlayerLosesAtAt }
                 clock.edit(message.timerWhite, message.timerBlack, message.timeNextPlayerLosesAt); // Edit the clocks
                 break;
-            } case "gameupdate": // When the game has ended by time/disconnect/resignation/aborted
+            } case "gameupdate": // When the game has ended by time/disconnect/resignation/aborted, OR we are resyncing to the game.
                 handleServerGameUpdate(data.value);
                 break;
             case "unsub": // The game has been deleted, server no longer sending update
@@ -196,7 +209,7 @@ const onlinegame = (function() {
                 inSync = false;
                 break;
             case "login": // Not logged in error
-                statustext.showStatus(translations["onlinegame"]["not_logged_in"], true, 100);
+                statustext.showStatus(translations.onlinegame.not_logged_in, true, 100);
                 websocket.getSubs().game = false;
                 inSync = false;
                 clock.stop();
@@ -205,13 +218,13 @@ const onlinegame = (function() {
                 board.darkenColor();
                 break;
             case "nogame": // Game is deleted / no longer exists
-                statustext.showStatus(translations["onlinegame"]["game_no_longer_exists"], false, 1.5);
+                statustext.showStatus(translations.onlinegame.game_no_longer_exists, false, 1.5);
                 websocket.getSubs().game = false;
                 inSync = false;
                 gamefileutility.concludeGame(game.getGamefile(), 'aborted', { requestRemovalFromActiveGames: false });
                 break;
             case "leavegame": // Another window connected
-                statustext.showStatus(translations["onlinegame"]["another_window_connected"]);
+                statustext.showStatus(translations.onlinegame.another_window_connected);
                 websocket.getSubs().game = false;
                 inSync = false;
                 closeOnlineGame();
@@ -235,8 +248,14 @@ const onlinegame = (function() {
             case "serverrestart":
                 initServerRestart(data.value);
                 break;
+            case "drawoffer": {
+                drawoffers.onOpponentExtendedOffer();
+                break;
+            } case "declinedraw":
+                statustext.showStatus(`Opponent declined draw offer.`);
+                break;
             default:
-                statustext.showStatus(`${translations["invites"]["unknown_action_received_1"]} ${message.action} ${translations["invites"]["unknown_action_received_2"]}`, true);
+                statustext.showStatus(`${translations.invites.unknown_action_received_1} ${message.action} ${translations.invites.unknown_action_received_2}`, true);
                 break;
         }
     }
@@ -258,8 +277,8 @@ const onlinegame = (function() {
     }
 
     function displayOpponentAFK(secsRemaining) {
-        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations["onlinegame"]["auto_resigning_in"] : translations["onlinegame"]["auto_aborting_in"];
-        statustext.showStatusForDuration(`${translations["onlinegame"]["opponent_afk"]} ${resigningOrAborting} ${secsRemaining}...`, 1000);
+        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations.onlinegame.auto_resigning_in : translations.onlinegame.auto_aborting_in;
+        statustext.showStatusForDuration(`${translations.onlinegame.opponent_afk} ${resigningOrAborting} ${secsRemaining}...`, 1000);
         const nextSecsRemaining = secsRemaining - 1;
         if (nextSecsRemaining === 0) return; // Stop
         const timeRemainUntilAFKLoss = afk.timeOpponentLoseFromAFK - Date.now();
@@ -287,8 +306,8 @@ const onlinegame = (function() {
     }
 
     function displayOpponentDisconnect(secsRemaining, wasByChoice) {
-        const opponent_disconnectedOrLostConnection = wasByChoice ? translations["onlinegame"]["opponent_disconnected"] : translations["onlinegame"]["opponent_lost_connection"];
-        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations["onlinegame"]["auto_resigning_in"] : translations["onlinegame"]["auto_aborting_in"];
+        const opponent_disconnectedOrLostConnection = wasByChoice ? translations.onlinegame.opponent_disconnected : translations.onlinegame.opponent_lost_connection;
+        const resigningOrAborting = movesscript.isGameResignable(game.getGamefile()) ? translations.onlinegame.auto_resigning_in : translations.onlinegame.auto_aborting_in;
         // The "You are AFK" message should overwrite, be on top of, this message,
         // so if that is running, don't display this 1-second disconnect message, but don't cancel it either!
         if (!afk.timeWeLoseFromAFK) statustext.showStatusForDuration(`${opponent_disconnectedOrLostConnection} ${resigningOrAborting} ${secsRemaining}...`, 1000);
@@ -304,7 +323,7 @@ const onlinegame = (function() {
         // {
         //     metadata: { Variant, White, Black, TimeControl, UTCDate, UTCTime, Rated },
         //     id, clock, publicity, youAreColor, timerWhite,
-        //     timerBlack, moves, autoAFKResignTime, disconnect, gameConclusion
+        //     timerBlack, moves, autoAFKResignTime, disconnect, gameConclusion, drawOffer
         // }
 
         // We were auto-unsubbed from the invites list, BUT we want to keep open the socket!!
@@ -387,6 +406,7 @@ const onlinegame = (function() {
 
         premove.showPremoves(gamefile);
 
+        guipause.onReceiveOpponentsMove(); // Update the pause screen buttons
     }
 
     function flashTabNameYOUR_MOVE(on) {
@@ -424,9 +444,9 @@ const onlinegame = (function() {
      * Called when the server sends us the conclusion of the game when it ends,
      * OR we just need to resync! The game may not always be over.
      * @param {Object} messageContents - The contents of the server message, with the properties:
-     * `gameConclusion`, `timerWhite`,`timerBlack`, `moves`, `autoAFKResignTime`.
+     * `gameConclusion`, `timerWhite`,`timerBlack`, `moves`, `autoAFKResignTime`, `offerDraw`
      */
-    function handleServerGameUpdate(messageContents) { // { gameConclusion, timerWhite, timerBlack, timeNextPlayerLosesAt, moves, autoAFKResignTime, serverRestartingAt }
+    function handleServerGameUpdate(messageContents) { // { gameConclusion, timerWhite, timerBlack, timeNextPlayerLosesAt, moves, autoAFKResignTime, offerDraw }
         if (!inOnlineGame) return;
         const gamefile = game.getGamefile();
         const claimedGameConclusion = messageContents.gameConclusion;
@@ -453,6 +473,8 @@ const onlinegame = (function() {
         // If the server is restarting, start displaying that info.
         if (messageContents.serverRestartingAt) initServerRestart(messageContents.serverRestartingAt);
         else resetServerRestarting();
+
+        drawoffers.set(messageContents.drawOffer);
 
         // Must be set before editing the clocks.
         gamefile.gameConclusion = claimedGameConclusion;
@@ -481,7 +503,7 @@ const onlinegame = (function() {
         // and the rest of the moves list matches, don't modify our moves,
         // just re-submit our move!
         const hasOneMoreMoveThanServer = gamefile.moves.length === moves.length + 1;
-        const finalMoveIsOurMove = gamefile.moves.length > 0 && movesscript.getColorThatPlayedMoveIndex(gamefile.moves.length - 1, gamefile.startSnapshot.turn === 'black') === ourColor;
+        const finalMoveIsOurMove = gamefile.moves.length > 0 && movesscript.getColorThatPlayedMoveIndex(gamefile, gamefile.moves.length - 1) === ourColor;
         const previousMoveMatches = (moves.length === 0 && gamefile.moves.length === 1) || gamefile.moves.length > 1 && moves.length > 0 && gamefile.moves[gamefile.moves.length - 2].compact === moves[moves.length - 1];
         if (!claimedGameConclusion && hasOneMoreMoveThanServer && finalMoveIsOurMove && previousMoveMatches) {
             console.log("Sending our move again after resyncing..");
@@ -520,7 +542,7 @@ const onlinegame = (function() {
             const thisShortmove = moves[i]; // '1,2>3,4Q'  The shortmove from the server's move list to add
             const move = movepiece.calculateMoveFromShortmove(gamefile, thisShortmove);
 
-            const colorThatPlayedThisMove = movesscript.getColorThatPlayedMoveIndex(i, gamefile.startSnapshot.turn === 'black');
+            const colorThatPlayedThisMove = movesscript.getColorThatPlayedMoveIndex(gamefile, i);
             const opponentPlayedThisMove = colorThatPlayedThisMove === opponentColor;
 
 
@@ -571,13 +593,14 @@ const onlinegame = (function() {
     /**
      * This has to be called before and separate from {@link initOnlineGame}
      * because loading the gamefile and the mesh generation requires this script to know our color.
-     * @param {string} color - The color we are in this online game
+     * @param {Object} gameOptions - An object that contains the properties `id`, `publicity`, `youAreColor`, `autoAFKResignTime`, `disconnect`, `serverRestartingAt`
      */
     function setColorAndGameID(gameOptions) {
         inOnlineGame = true;
         ourColor = gameOptions.youAreColor;
         gameID = gameOptions.id;
         isPrivate = gameOptions.publicity === 'private';
+        gameHasConcluded = false;
     }
 
     /**
@@ -606,10 +629,12 @@ const onlinegame = (function() {
         isPrivate = undefined;
         ourColor = undefined;
         inSync = false;
+        gameHasConcluded = undefined;
         resetAFKValues();
         resetServerRestarting();
         cancelFlashTabTimer();
         perspective.resetRotations(); // Without this, leaving an online game of which we were black, won't reset our rotation.
+        drawoffers.reset();
     }
 
     function resetAFKValues() {
@@ -652,6 +677,10 @@ const onlinegame = (function() {
 
         websocket.sendmessage('game', 'submitmove', data, true);
 
+        // Declines any open draw offer from our opponent. We don't need to inform
+        // the server because the server auto declines when we submit our move.
+        drawoffers.callback_declineDraw({ informServer: false });
+        
         rescheduleAlertServerWeAFK();
     }
 
@@ -659,7 +688,7 @@ const onlinegame = (function() {
     function onMainMenuPress() {
         if (!inOnlineGame) return;
         const gamefile = game.getGamefile();
-        if (gamefileutility.isGameOver(gamefile)) {
+        if (gameHasConcluded) { // The server has concluded the game, not us
             if (websocket.getSubs().game) {
                 websocket.sendmessage('general','unsub','game');
                 websocket.getSubs().game = false;
@@ -728,12 +757,12 @@ const onlinegame = (function() {
     /** Displays the next "Server restaring..." message, and schedules the next one. */
     function displayServerRestarting(minutesLeft) {
         if (minutesLeft === 0) {
-            statustext.showStatus(translations["onlinegame"]["server_restarting"], false, 2);
+            statustext.showStatus(translations.onlinegame.server_restarting, false, 2);
             serverRestart.time = false;
             return; // Print no more server restarting messages
         }
-        const minutes_plurality = minutesLeft === 1 ? translations["onlinegame"]["minute"] : translations["onlinegame"]["minutes"];
-        statustext.showStatus(`${translations["onlinegame"]["server_restarting_in"]} ${minutesLeft} ${minutes_plurality}...`, false, 2);
+        const minutes_plurality = minutesLeft === 1 ? translations.onlinegame.minute : translations.onlinegame.minutes;
+        statustext.showStatus(`${translations.onlinegame.server_restarting_in} ${minutesLeft} ${minutes_plurality}...`, false, 2);
         let nextKeyMinute;
         for (const keyMinute of serverRestart.keyMinutes) {
             if (keyMinute < minutesLeft) {
@@ -760,11 +789,13 @@ const onlinegame = (function() {
 
     /** Called when an online game is concluded (termination shown on-screen) */
     function onGameConclude() {
+        gameHasConcluded = true; // This NEEDS to be above drawoffers.reset(), as that relies on this!
         cancelAFKTimer();
         cancelFlashTabTimer();
         cancelMoveSound();
         resetServerRestarting();
         deleteCustomVariantOptions();
+        drawoffers.reset();
     }
 
     return Object.freeze({
@@ -787,7 +818,8 @@ const onlinegame = (function() {
         update,
         onLostConnection,
         cancelMoveSound,
-        onGameConclude
+        onGameConclude,
+        hasGameConcluded
     });
 
 })();
