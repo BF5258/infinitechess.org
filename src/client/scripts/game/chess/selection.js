@@ -78,7 +78,11 @@ const selection = (function() {
         // Guard clauses...
         const gamefile = game.getGamefile();
         // if (onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn(gamefile)) return; // Not our turn
-        if (input.isMouseDown_Right()) return unselectPiece(); // Right-click deselects everything
+        if (input.isMouseDown_Right()) {
+            unselectPiece();
+            premove.clearPremoves(gamefile);
+            return; // Right-click deselects everything and cancels all premoves
+        }
         if (pawnIsPromoting) { // Do nothing else this frame but wait for a promotion piece to be selected
             if (promoteTo) makePromotionMove();
             return;
@@ -158,7 +162,7 @@ const selection = (function() {
      * A piece is **not** already selected. This is called when you *click* a piece.
      * This will select the piece if it is a friendly, or forward
      * you to the game's front if your viewing past moves.
-     * @param {Piece} pieceClicked
+     * @param {string} [pieceClickedType] - The type of piece clicked on, if there is one.
      */
     function handleSelectingPiece(pieceClickedType) {
         const gamefile = game.getGamefile();
@@ -258,11 +262,11 @@ const selection = (function() {
         const compact = formatconverter.LongToShort_CompactMove(move);
         move.compact = compact;
         let gamefile = game.getGamefile();
-        if (!onlinegame.areInOnlineGame() || onlinegame.isItOurTurn(gamefile)) {
+        if (isPremove) {
+            premove.makePremove(gamefile, move);
+        } else {
             movepiece.makeMove(gamefile, move);
             onlinegame.sendMove();
-        } else {
-            premove.makePremove(gamefile, move);
         }
 
         unselectPiece();
@@ -293,7 +297,7 @@ const selection = (function() {
         const hoverSquareIsVoid = !hoverSquareIsSameColor && typeAtHoverCoords === 'voidsN';
         // The next boolean ensures that only pieces of the same color as the current player's turn can have a ghost piece:
         const selectionColorAgreesWithMoveTurn = math.getPieceColorFromType(pieceSelected.type) === gamefile.whosTurn;
-        const canPremove = isPremove && premove.arePremovesEnabled() && !onlinegame.isItOurTurn();
+        const canPremove = isPremove && premove.arePremovesAllowed();
         // This will also subtley transfer any en passant capture tags to our `hoverSquare` if the function found an individual move with the tag.
         hoverSquareLegal = ((selectionColorAgreesWithMoveTurn || canPremove) && !isOpponentPiece && legalmoves.checkIfMoveLegal(legalMoves, pieceSelected.coords, hoverSquare)) || (options.getEM() && !hoverSquareIsVoid && !hoverSquareIsSameColor);
     }

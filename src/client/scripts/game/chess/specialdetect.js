@@ -71,14 +71,6 @@ const specialdetect = (function() {
                 )
             ) continue; //Ignore obstructions when making premoves
 
-            if(isPremove && 
-                (
-                !doesPieceHaveSpecialRight(gamefile, thisCoord) ||
-                math.getPieceColorFromType(thisPiece.type) !== color ||
-                thisPiece.type.startsWith('pawns')
-                )
-            ) continue; //Ignore obstructions when making premoves
-
             if (thisCoord[0] < x && thisCoord[0] > left) left = thisCoord[0];
             else if (thisCoord[0] > x && thisCoord[0] < right) right = thisCoord[0];
         }

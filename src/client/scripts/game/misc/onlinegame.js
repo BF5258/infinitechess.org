@@ -19,7 +19,7 @@ const onlinegame = (function() {
      */
     let gameHasConcluded;
 
-    /** 
+    /**
      * Whether we are in sync with the game on the server.
      * If false, we do not submit our move. (move auto-submitted upon resyncing)
      * Set to false whenever the socket closes, or we unsub from the game.
@@ -344,7 +344,7 @@ const onlinegame = (function() {
      */
     function handleOpponentsMove(message) { // { move, gameConclusion, moveNumber, timerWhite, timerBlack, timeNextPlayerLosesAt }
         if (!inOnlineGame) return;
-        const moveAndConclusion = { move: message.move, gameConclusion: message.gameConclusion }
+        const moveAndConclusion = { move: message.move, gameConclusion: message.gameConclusion };
         
         const gamefile = game.getGamefile();
 
