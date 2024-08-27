@@ -350,7 +350,7 @@ const onlinegame = (function() {
 
         //Remove premoves from the board. They will be put back later.
         movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
-        premove.hidePremoves(gamefile);
+        premove.hidePremoves(gamefile, {clearRewindInfo: true});
 
         // Make sure the move number matches the expected.
         // Otherwise, we need to re-sync

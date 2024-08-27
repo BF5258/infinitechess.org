@@ -5,6 +5,15 @@
 
 "use strict";
 
+/** 
+ * To do:
+ * - Fix bugs
+ * - allow castles to be premoved
+ * Bugs:
+ * - Check highlight is only rendered every second premove
+ */
+
+
 const premove = (function(){
 
     let premovesEnabled = true; //alows the user to make premoves.
@@ -126,21 +135,34 @@ const premove = (function(){
     }
 
     /**
-     * 
-     * @param {Gamefile} gamefile 
-     * @param {Object} params 
+     * Remove all premoves from the list of moves. This must be called before adding moves from the server or analysing the position.
+     * @param {gamefile} gamefile - the gamefile
+     * @param {Object} options - An object containing options
+     * - `updateData`: Whether to modify the mesh of all the pieces. Default is *true*.
+     * - `clearRewindInfo`: Deletes `rewindInfo` and `captured` properties. Should be true if moves will be added to the gamefile. Default is *false*.
      */
-    function hidePremoves(gamefile, {updateData = true} = {}) {
-        //Occasionly the following error occurs: 
-        //"Cannot add a piece and update the data when there are no undefined placeholders remaining!"
-        //I don't know why.
+    function hidePremoves(gamefile, {updateData = true, clearRewindInfo = false} = {}) {
         if(!gamefile.premovesVisible) return console.error("Premoves are already hidden.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
-        for(let i=0; i<gamefile.premoves.length; i++)
+        for(let i=gamefile.premoves.length-1; i>=0; i--) {
             movepiece.rewindMove(gamefile, { updateData, animate: false, flipTurn: false });
+            //Delete the rewind info as it may contain outdated information
+            //It will be updated when `showPremoves` or `submitPremove` is called.
+            if(clearRewindInfo) {
+                const premove = gamefile.premoves[i];
+                delete premove.rewindInfo;
+                delete premove.captured;
+            }
+        }
         gamefile.premovesVisible = false;
     }
 
+    /**
+     * 
+     * @param {gamefile} gamefile 
+     * @param {Object} options - An object containing options
+     * - `updateData`: Whether to modify the mesh of all the pieces.
+     */
     function showPremoves(gamefile, {updateData = true} = {}) {
         if(gamefile.premovesVisible) return console.error("Premoves are already shown.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
