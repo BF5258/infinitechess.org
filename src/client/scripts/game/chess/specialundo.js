@@ -27,10 +27,19 @@ const specialundo = {
     // * Animate the piece
 
 
-    // Called when the moved piece to undo is a king
-    // Tests if the move contains "castle" special move, if so it undos it!
-    // RETURNS FALSE if no special move was detected!
-    kings(gamefile, move, { updateData = true, animate = true } = {}) {
+    /**
+     * Called when the moved piece to undo is a king
+     * Tests if the move contains "castle" special move, if so it undos it!
+     * RETURNS FALSE if no special move was detected!
+     * @param {gamfile} gamefile - The gamefile
+     * @param {Move} move - the move to undo
+     * @param {Object} options - An object containing various options
+     * - `updateData`: Whether to modify the mesh of all the pieces. Should be false for simulated moves.
+     * - `restoreRights`: Whether to restore the rooks special rights. Should be true if we're undo'ing simulated moves or premoves.
+     * - `animate`: Whether to animate this rewinding.
+     * @returns {boolean} - if a special move was undone
+     */
+    kings(gamefile, move, { updateData = true, animate = true, restoreRights = false } = {}) {
 
         const specialTag = move.castle; // { dir, coord }
         if (!specialTag) return false; // No special move to undo, return false to signify we didn't undo the move.
@@ -48,7 +57,7 @@ const specialundo = {
         movepiece.movePiece(gamefile, movedPiece, specialTag.coord, { updateData }); // Changes the pieces coords and data in the organized lists without making any captures.
         // Restore the rook's special move rights if this is a simulated move
         // (the kings special move rights are restored within checkdetection.doesMovePutInCheck())
-        if (!updateData) {
+        if (restoreRights) {
             const key = math.getKeyFromCoords(specialTag.coord);
             gamefile.specialRights[key] = true;
         }
@@ -58,6 +67,12 @@ const specialundo = {
             animation.animatePiece(move.type, move.endCoords, move.startCoords);
             const resetAnimations = false;
             animation.animatePiece(movedPiece.type, castledPieceCoords, specialTag.coord, undefined, resetAnimations); // Castled piece
+        }
+
+        // Restore any pieces captured by a premove
+        if (move.captured) {
+            if (move.captured[0]) movepiece.addPiece(gamefile, move.captured[0], move.endCoords, move.rewindInfo.capturedIndex?.[0], { updateData });
+            if (move.captured[1]) movepiece.addPiece(gamefile, move.captured[1], castledPieceCoords, move.rewindInfo.capturedIndex?.[1], { updateData });
         }
 
         return true; // Special move has been undo'd!

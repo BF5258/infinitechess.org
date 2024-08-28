@@ -37,17 +37,26 @@ const specialmove = {
         const specialTag = move.castle; // { dir: -1/1, coord }
         if (!specialTag) return false; // No special move to execute, return false to signify we didn't move the piece.
 
-        // Move the king to new square
-
-        movepiece.movePiece(gamefile, piece, move.endCoords, { updateData }); // Make normal move
-
-        // Move the rook to new square
-
+        // Find the rook and where it will land
         const pieceToCastleWith = gamefileutility.getPieceAtCoords(gamefile, specialTag.coord);
         const landSquare = [move.endCoords[0] - specialTag.dir, move.endCoords[1]];
+
+        // Remove any obstructing pieces (used when premoving)
+        const kingCapturedPiece = gamefileutility.getPieceAtCoords(gamefile, move.endCoords);
+        const rookCapturedPiece = gamefileutility.getPieceAtCoords(gamefile, landSquare);
+        if(kingCapturedPiece || rookCapturedPiece) {
+            move.captured = [kingCapturedPiece.type, rookCapturedPiece.type];
+            if (simulated) move.rewindInfo.capturedIndex = [ kingCapturedPiece.index, rookCapturedPiece.index ];
+            if (kingCapturedPiece) movepiece.deletePiece(gamefile, kingCapturedPiece, { updateData });
+            if (rookCapturedPiece) movepiece.deletePiece(gamefile, rookCapturedPiece, { updateData });
+        }
+
         // Delete the rook's special move rights
         const key = math.getKeyFromCoords(pieceToCastleWith.coords);
         delete gamefile.specialRights[key];
+
+        // Move the king and rook 
+        movepiece.movePiece(gamefile, piece, move.endCoords, { updateData }); // Make normal move
         movepiece.movePiece(gamefile, pieceToCastleWith, landSquare, { updateData }); // Make normal move
 
         if (animate) {

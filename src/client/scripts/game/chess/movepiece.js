@@ -414,7 +414,7 @@ const movepiece = (function() {
         const trimmedType = math.trimWorBFromType(move.type);
 
         let isSpecialMove = false;
-        if (gamefile.specialUndos[trimmedType]) isSpecialMove = gamefile.specialUndos[trimmedType](gamefile, move, { updateData, animate });
+        if (gamefile.specialUndos[trimmedType]) isSpecialMove = gamefile.specialUndos[trimmedType](gamefile, move, { updateData, restoreRights:removeMove, animate });
         if (!isSpecialMove) rewindMove_NoSpecial(gamefile, move, { updateData, animate });
 
         // inCheck and attackers are always restored, no matter if we're deleting the move or not.
