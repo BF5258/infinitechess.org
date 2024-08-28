@@ -260,7 +260,7 @@ const movepiece = (function() {
      * @param {boolean} [flagMoveAsCheck] - If *true*, flags the last played move as a check. Default: true
      */
     function updateInCheck(gamefile, flagMoveAsCheck = true) {
-
+        if(premove.isPremove(gamefile)) return; //Being checked by a premove doesn't really make sence. The piece hasn't actually moved yet.
         let attackers = undefined;
         // Only pass in attackers array to be filled by the checking pieces if we're using checkmate win condition.
         const whosTurnItWasAtMoveIndex = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex);

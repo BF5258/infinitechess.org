@@ -171,8 +171,8 @@ function gamefile(metadata, { moves = [], variantOptions, gameConclusion } = {})
     this.moves = [];
     /** The queue of premoves waiting to be verified and submitted. @type {Move[]} */
     this.premoves = [];
-    /** True if `gamefile.moves` contains premoves. Remove them using `premove.hidePremoves` before evaluating the current position. */
-    this.premovesVisible = true;
+    /** The number of premoves contained in `this.moves`. *False* if they have been hidden. @type {number | false} */
+    this.premovesVisible = 0;
     /** Index of the move we're currently viewing in the moves list. -1 means we're looking at the very beginning of the game. */
     this.moveIndex = -1;
     /** If enpassant is allowed at the front of the game, this defines the coordinates. */

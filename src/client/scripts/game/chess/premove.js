@@ -123,14 +123,17 @@ const premove = (function(){
         //   there is no way to premove with those that aren't the closest.
         //   Do any variants have this?
 
-        if(gamefile.premovesVisible) movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
+        if(gamefile.premovesVisible!==false) {
+            gamefile.premovesVisible++;
+            movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
+        }
     }
 
     /** Sends all premoved pieces back to their original positions then clears the queue of premoves. */
     function clearPremoves(gamefile)
     {
         if (gamefile.premovesVisible) hidePremoves(gamefile);
-        gamefile.premovesVisible = true; //All premoves are on the board; there just happens to be none.
+        gamefile.premovesVisible = 0;
         gamefile.premoves = [];
     }
 
@@ -142,7 +145,7 @@ const premove = (function(){
      * - `clearRewindInfo`: Deletes `rewindInfo` and `captured` properties. Should be true if moves will be added to the gamefile. Default is *false*.
      */
     function hidePremoves(gamefile, {updateData = true, clearRewindInfo = false} = {}) {
-        if(!gamefile.premovesVisible) return console.error("Premoves are already hidden.");
+        if(gamefile.premovesVisible===false) return console.error("Premoves are already hidden.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
         for(let i=gamefile.premoves.length-1; i>=0; i--) {
             movepiece.rewindMove(gamefile, { updateData, animate: false, flipTurn: false });
@@ -164,7 +167,7 @@ const premove = (function(){
      * - `updateData`: Whether to modify the mesh of all the pieces.
      */
     function showPremoves(gamefile, {updateData = true} = {}) {
-        if(gamefile.premovesVisible) return console.error("Premoves are already shown.");
+        if(gamefile.premovesVisible|=0) return console.error("Premoves are already shown.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
         for(let i=0; i<gamefile.premoves.length; i++) {
             const move = gamefile.premoves[i];
@@ -176,23 +179,30 @@ const premove = (function(){
                 gamefile.premoves.length = i;
                 break;
             }
+            gamefile.premovesVisible++;
             movepiece.makeMove(gamefile, move, { updateData, flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
         }
-        gamefile.premovesVisible = true;
-    }
-
-    /**Returns *true* if we are currently makeing a premove.*/
-    function isPremove() {
-        return arePremovesAllowed() && onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn();
     }
 
     /**
-     * Returns the number of premoves that have been recorded.
-     * @returns {number} Number of premoves that have been recorded.
-     */
-    function getPremoveCount() {
-        return gamefile.premoves.length;
+     * Returns *true* if move index is a premove.
+     * @param {gamefile} gamefile - the gamefile
+     * @param {number} [index] - The index to check. If undefined the current moveIndex is used.
+     * @returns {boolean} Are we viewing a premove?
+    */
+    function isPremove(gamefile, index) {
+        return index??gamefile.moveIndex >= moveNumber(gamefile);
     }
+
+    /**
+     * Returns the number of moves in a game excluding premoves
+     * @param {gamefile} gamefile - the gamefile 
+     * @returns {number}
+    */
+    function moveNumber(gamefile) {
+        return gamefile.moves.length - gamefile.premovesVisible;
+    }
+
 
     return Object.freeze({
         makePremove,
@@ -204,8 +214,8 @@ const premove = (function(){
         enablePremoves,
         arePremovesEnabled,
         arePremovesAllowed,
-        getPremoveCount,
-        //isPremove //Now redundent. selection.js keeps track of this
+        moveNumber,
+        isPremove
     });
 
 })();
