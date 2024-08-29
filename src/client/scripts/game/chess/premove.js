@@ -5,15 +5,6 @@
 
 "use strict";
 
-/** 
- * To do:
- * - Fix bugs
- * - allow castles to be premoved
- * Bugs:
- * - Check highlight is only rendered every second premove
- */
-
-
 const premove = (function(){
 
     let premovesEnabled = true; //alows the user to make premoves.
@@ -71,7 +62,7 @@ const premove = (function(){
             return;
         }
 
-        movepiece.makeMove(gamefile, premove);
+        movepiece.makeMove(gamefile, premove, {animate: false});
         onlinegame.sendMove();
     }
 
@@ -117,8 +108,6 @@ const premove = (function(){
         //There exists the possibility of the opponent capturing pieces obstructing a castle;
         //therefore, premove castling should be displayed regardless of obstructions.
         //TODO:
-        // - Specialmoves doesn't check if there are pieces already at the destination.
-        //   This causes organised lines to be confused as there are two pieces at the same coords.
         // - If there are multiple rooks with special rights in the same direction,
         //   there is no way to premove with those that aren't the closest.
         //   Do any variants have this?
@@ -147,15 +136,16 @@ const premove = (function(){
     function hidePremoves(gamefile, {updateData = true, clearRewindInfo = false} = {}) {
         if(gamefile.premovesVisible===false) return console.error("Premoves are already hidden.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
-        for(let i=gamefile.premoves.length-1; i>=0; i--) {
+        while(gamefile.premovesVisible>0) {
             movepiece.rewindMove(gamefile, { updateData, animate: false, flipTurn: false });
             //Delete the rewind info as it may contain outdated information
             //It will be updated when `showPremoves` or `submitPremove` is called.
             if(clearRewindInfo) {
-                const premove = gamefile.premoves[i];
+                const premove = gamefile.premoves[gamefile.premovesVisible-1];
                 delete premove.rewindInfo;
                 delete premove.captured;
             }
+            gamefile.premovesVisible--;
         }
         gamefile.premovesVisible = false;
     }
@@ -169,40 +159,58 @@ const premove = (function(){
     function showPremoves(gamefile, {updateData = true} = {}) {
         if(gamefile.premovesVisible|=0) return console.error("Premoves are already shown.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
-        for(let i=0; i<gamefile.premoves.length; i++) {
-            const move = gamefile.premoves[i];
-            const pieceTypeAtCoords = gamefileutility.getPieceTypeAtCoords(gamefile, move.startCoords);
-            //TODO: When castling the rook needs to be checked as well.
-            if (pieceTypeAtCoords != move.type) {
-                //The piece that was premoved has been captured
-                //cancel all premoves after this
-                gamefile.premoves.length = i;
+        while(gamefile.premovesVisible < gamefile.premoves.length) {
+            const nextPremove = gamefile.premoves[gamefile.premovesVisible];
+            
+            //Check if the piece still exists
+            const pieceTypeAtCoords = gamefileutility.getPieceTypeAtCoords(gamefile, nextPremove.startCoords);
+            let pieceDestroyed = pieceTypeAtCoords !== nextPremove.type;
+            if (nextPremove.castle) { //When castling the rook needs to be checked as well.
+                const pieceToCastleWith = gamefileutility.getPieceTypeAtCoords(gamefile, nextPremove.castle.coords);
+                const color = pieceToCastleWith && math.getPieceColorFromType(pieceToCastleWith);
+                if (color!==onlinegame.getOurColor()) pieceDestroyed = true;
+            }
+            if (pieceDestroyed) {
+                //The piece that was premoved has been captured. Cancel this premove and all after it.
+                gamefile.premoves.length = gamefile.premovesVisible;
                 break;
             }
+
             gamefile.premovesVisible++;
-            movepiece.makeMove(gamefile, move, { updateData, flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
+            movepiece.makeMove(gamefile, nextPremove, { updateData, flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false, animate: false });
         }
     }
 
     /**
-     * Returns *true* if move index is a premove.
+     * Returns the number of premoves that have been applied at `index`.
      * @param {gamefile} gamefile - the gamefile
      * @param {number} [index] - The index to check. If undefined the current moveIndex is used.
-     * @returns {boolean} Are we viewing a premove?
+     * @returns {number} The number of premoves visible at `index` or *false* if it is a past move.
     */
-    function isPremove(gamefile, index) {
-        return index??gamefile.moveIndex >= moveNumber(gamefile);
+    function getPremoveCountAtIndex(gamefile, index) {
+        const premoveNumber = index??gamefile.moveIndex + 1 - getPlyCountExcludingPremoves(gamefile);
+        if (premoveNumber<0) return false;
+        return premoveNumber;
     }
 
     /**
-     * Returns the number of moves in a game excluding premoves
+     * Returns the number of plys in the game excluding premoves
      * @param {gamefile} gamefile - the gamefile 
      * @returns {number}
     */
-    function moveNumber(gamefile) {
+    function getPlyCountExcludingPremoves(gamefile) {
         return gamefile.moves.length - gamefile.premovesVisible;
     }
 
+    /**
+     * Returns true if move `index` is a premove.
+     * @param {gamefile} gamefile 
+     * @param {number} [index] - If index is undefined the current moveIndex is used.
+     * @returns {boolean}
+     */
+    function isPremove(gamefile, index) {
+        return index??gamefile.moveIndex >= getPlyCountExcludingPremoves(gamefile);
+    }
 
     return Object.freeze({
         makePremove,
@@ -214,7 +222,8 @@ const premove = (function(){
         enablePremoves,
         arePremovesEnabled,
         arePremovesAllowed,
-        moveNumber,
+        getPlyCountExcludingPremoves,
+        getPremoveCountAtIndex,
         isPremove
     });
 

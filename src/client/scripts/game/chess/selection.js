@@ -207,7 +207,7 @@ const selection = (function() {
         isPremove = !isOpponentPiece && onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn();
 
         // Calculate the legal moves it has. Keep a record of this so that when the mouse clicks we can easily test if that is a valid square.
-        legalMoves = legalmoves.calculate(game.getGamefile(), pieceSelected, {isPremove});
+        legalMoves = legalmoves.calculate(game.getGamefile(), pieceSelected, {isPremove: isPremove && premove.arePremovesAllowed()});
 
         highlights.regenModel(); // Generate the buffer model for the blue legal move fields.
     }
