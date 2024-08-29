@@ -194,8 +194,8 @@ const selection = (function() {
     /**
      * Selects the provided piece. Auto-calculates it's legal moves.
      * @param {string} type - The type of piece to select.
-     * @param {*} index - The index of the piece within the gamefile's piece list.
-     * @param {*} coords - The coordinates of the piece.
+     * @param {number} index - The index of the piece within the gamefile's piece list.
+     * @param {number[]} coords - The coordinates of the piece.
      */
     function selectPiece(type, index, coords) {
         main.renderThisFrame();
