@@ -44,11 +44,17 @@ const stats = {
     },
 
     setTextContentOfMoves() {
+        const gamefile = game.getGamefile()
 
-        const currentPly = game.getGamefile().moveIndex + 1;
-        const totalPlyCount = movesscript.getPlyCount(game.getGamefile().moves);
-
-        stats.elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
+        if(premove.isPremove(gamefile)) {
+            const currentPremove = premove.getPremoveCountAtIndex(gamefile);
+            const totalPremoveCount = gamefile.premoves.length;
+            stats.elementStatusMoves.textContent = `${translations.premove_counter} ${currentPremove}/${totalPremoveCount}`;
+        } else {
+            const currentPly = gamefile.moveIndex + 1;
+            const totalPlyCount = premove.getPlyCountExcludingPremoves(gamefile);
+            stats.elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
+        }
     },
 
     updateStatsCSS() {
