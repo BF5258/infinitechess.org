@@ -41,7 +41,7 @@ const specialundo = {
      */
     kings(gamefile, move, { updateData = true, animate = true, restoreRights = false } = {}) {
 
-        const specialTag = move.castle; // { dir, coord }
+        const specialTag = move.castle; // { dir, coords }
         if (!specialTag) return false; // No special move to undo, return false to signify we didn't undo the move.
 
         // Move the king back
@@ -54,11 +54,11 @@ const specialundo = {
         const kingCoords = movedPiece.coords;
         const castledPieceCoords = [kingCoords[0] - specialTag.dir, kingCoords[1]];
         movedPiece = gamefileutility.getPieceAtCoords(gamefile, castledPieceCoords); // Returns { type, index, coords }
-        movepiece.movePiece(gamefile, movedPiece, specialTag.coord, { updateData }); // Changes the pieces coords and data in the organized lists without making any captures.
+        movepiece.movePiece(gamefile, movedPiece, specialTag.coords, { updateData }); // Changes the pieces coords and data in the organized lists without making any captures.
         // Restore the rook's special move rights if this is a simulated move
         // (the kings special move rights are restored within checkdetection.doesMovePutInCheck())
         if (restoreRights) {
-            const key = math.getKeyFromCoords(specialTag.coord);
+            const key = math.getKeyFromCoords(specialTag.coords);
             gamefile.specialRights[key] = true;
         }
 
@@ -66,7 +66,7 @@ const specialundo = {
         if (animate) {
             animation.animatePiece(move.type, move.endCoords, move.startCoords);
             const resetAnimations = false;
-            animation.animatePiece(movedPiece.type, castledPieceCoords, specialTag.coord, undefined, resetAnimations); // Castled piece
+            animation.animatePiece(movedPiece.type, castledPieceCoords, specialTag.coords, undefined, resetAnimations); // Castled piece
         }
 
         // Restore any pieces captured by a premove

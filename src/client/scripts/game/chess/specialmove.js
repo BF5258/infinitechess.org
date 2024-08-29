@@ -34,11 +34,11 @@ const specialmove = {
     // RETURNS FALSE if special move was not executed!
     kings(gamefile, piece, move, { updateData = true, animate = true, updateProperties = true, simulated = false } = {}) {
 
-        const specialTag = move.castle; // { dir: -1/1, coord }
+        const specialTag = move.castle; // { dir: -1/1, coords }
         if (!specialTag) return false; // No special move to execute, return false to signify we didn't move the piece.
 
         // Find the rook and where it will land
-        const pieceToCastleWith = gamefileutility.getPieceAtCoords(gamefile, specialTag.coord);
+        const pieceToCastleWith = gamefileutility.getPieceAtCoords(gamefile, specialTag.coords);
         const landSquare = [move.endCoords[0] - specialTag.dir, move.endCoords[1]];
 
         // Remove any obstructing pieces (used when premoving)

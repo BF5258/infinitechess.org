@@ -110,13 +110,13 @@ const specialdetect = (function() {
 
         if (leftLegal) {
             const specialMove = [coords[0] - 2, coords[1]];
-            specialMove.castle = { dir: -1, coord: leftCoord};
+            specialMove.castle = { dir: -1, coords: leftCoord};
             individualMoves.push(specialMove);
         }
 
         if (rightLegal) {
             const specialMove = [coords[0] + 2, coords[1]];
-            specialMove.castle = { dir: 1, coord: rightCoord};
+            specialMove.castle = { dir: 1, coords: rightCoord};
             individualMoves.push(specialMove);
         }
     }
