@@ -233,6 +233,13 @@ const selection = (function() {
         // Reselect! Recalc its legal moves, and recolor.
         const newIndex = gamefileutility.getPieceIndexByTypeAndCoords(gamefile, pieceSelected.type, pieceSelected.coords);
         selectPiece(pieceSelected.type, newIndex, pieceSelected.coords);
+
+        if(pawnIsPromoting) {
+            //If a pawn was promoting it might not be legal any more.
+            //This occurs when a move from the opponent is recieved as the user is making a premove.
+            const promotionStillLegal = legalmoves.checkIfMoveLegal(legalMoves, pieceSelected.coords, pawnIsPromoting);
+            if(!promotionStillLegal) cancelPromotion();
+        }
     }
 
     /**
@@ -247,6 +254,15 @@ const selection = (function() {
         promoteTo = undefined;
         guipromotion.close(); // Close the promotion UI
         main.renderThisFrame();
+    }
+
+    /**
+     * Cancels the promotion without unselecting the pawn.
+     */
+    function cancelPromotion() {
+        pawnIsPromoting = false;
+        promoteTo = undefined;
+        guipromotion.close(); // Close the promotion UI
     }
 
     /**
