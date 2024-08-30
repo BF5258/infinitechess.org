@@ -7,16 +7,33 @@
 
 const premove = (function(){
 
-    let premovesEnabled = true; //alows the user to make premoves.
+    /**
+     * An option set by the user.
+     * - 0: Premoves are disabled.
+     * - 1: Allow a single premove. (like Lichess)
+     * - 2: Allow multiple premoves.
+     * @type {number}
+     */
+    let premoveMode = 2;
 
     /** Enables or disables premoves.
-     * @param {boolean} value - Are premoves enabled? 
-     * - True: enable premoves
-     * - False: disable premoves
+     * @param {value} mode - 
+     * - 0: Premoves are disabled.
+     * - 1: Allow a single premove. (like Lichess)
+     * - 2: Allow multiple premoves.
      */
-    function enablePremoves(value = true) {
-        premovesEnabled = value;
-        if(!value) clearPremoves(game.getGamefile());
+    function enablePremoves(value = 2) {
+        premoveMode = value;
+        gamefile = game.getGamefile();
+        if(!value) return clearPremoves(gamefile);
+        if(value<2) {
+            hidePremoves(gamefile);
+            if(gamefile.premoves.length>1) gamefile.premoves.length = 1;
+        }
+    }
+
+    function disablePremoves() {
+        enablePremoves(0);
     }
 
     /**
@@ -24,7 +41,7 @@ const premove = (function(){
      * @returns {boolean}
      */
     function arePremovesEnabled() {
-        return premovesEnabled;
+        return premoveMode>0;
     }
 
     /**
@@ -32,7 +49,8 @@ const premove = (function(){
      * @returns {boolean}
      */
     function arePremovesAllowed() {
-        return premovesEnabled; //&& game.getGamefile().gameRules.premovesAllowed;
+        //I was going to add a gamerule to disable premoves but users would just disable it wouldn't they?
+        return premoveMode>0; //&& game.getGamefile().gameRules.premovesAllowed;
     }
 
     /**
@@ -47,7 +65,7 @@ const premove = (function(){
             return console.error("The premoves are still displayed on the board. Call `hidePremoves` first.");
         }
 
-        if (!gamefile.premoves.length || !premovesEnabled)
+        if (!gamefile.premoves.length || premoveMode<1)
             return; //The user has not made a premove.
 
         /** @type {Move} */ //We already checked that the array isn't empty. `premoves.shift()` should return a value.
@@ -83,12 +101,13 @@ const premove = (function(){
 
     function  renderHighlights() {
         const gamefile = game.getGamefile();
-        if(!gamefile.premovesVisible) return;
         const premoves = gamefile.premoves;
+        if (!premoves.length) return; //nothing to highlight
         const color = options.getDefaultPremoveHighlightColor();
         const data = [];
+        data.push(...bufferdata.getDataQuad_Color3D_FromCoord(premoves[0].startCoords, -0.005, color));
         for (const premove of premoves) { 
-            data.push(...bufferdata.getDataQuad_Color3D_FromCoord(premove.endCoords, -0.005, color))
+            data.push(...bufferdata.getDataQuad_Color3D_FromCoord(premove.endCoords, -0.005, color));
         }
         const model = buffermodel.createModel_Colored(new Float32Array(data), 3, "TRIANGLES");
         model.render();
@@ -99,11 +118,12 @@ const premove = (function(){
      * @param {Move} move - the move the piece made
     */
     function makePremove(gamefile, move) {
-        if (!premovesEnabled)
+        if (premoveMode<1)
             return;
         if (main.devBuild) console.log("A premove was made.");
         
-        gamefile.premoves.push(move);
+        if(premoveMode>1) gamefile.premoves.push(move);
+        else gamefile.premoves[0] = move;
 
         //There exists the possibility of the opponent capturing pieces obstructing a castle;
         //therefore, premove castling should be displayed regardless of obstructions.
@@ -112,7 +132,7 @@ const premove = (function(){
         //   there is no way to premove with those that aren't the closest.
         //   Do any variants have this?
 
-        if(gamefile.premovesVisible!==false) {
+        if(gamefile.premovesVisible!==false && premoveMode>1) {
             gamefile.premovesVisible++;
             movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
         }
@@ -122,7 +142,7 @@ const premove = (function(){
     function clearPremoves(gamefile)
     {
         if (gamefile.premovesVisible) hidePremoves(gamefile);
-        gamefile.premovesVisible = 0;
+        gamefile.premovesVisible = premoveMode>1?0:false;
         gamefile.premoves = [];
     }
 
@@ -157,6 +177,7 @@ const premove = (function(){
      * - `updateData`: Whether to modify the mesh of all the pieces.
      */
     function showPremoves(gamefile, {updateData = true} = {}) {
+        if(premoveMode<2) return;
         if(gamefile.premovesVisible|=0) return console.error("Premoves are already shown.");
         movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
         while(gamefile.premovesVisible < gamefile.premoves.length) {
@@ -220,6 +241,7 @@ const premove = (function(){
         renderHighlights,
         submitPremove,
         enablePremoves,
+        disablePremoves,
         arePremovesEnabled,
         arePremovesAllowed,
         getPlyCountExcludingPremoves,
