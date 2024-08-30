@@ -388,6 +388,9 @@ const onlinegame = (function() {
         specialdetect.transferSpecialFlags_FromCoordsToMove(endCoordsToAppendSpecial, move);
         movepiece.makeMove(gamefile, move);
 
+        premove.submitPremove(gamefile); //Send our next premove to the server if there are any
+        premove.showPremoves(gamefile); //Put the premoves back
+
         selection.reselectPiece(); // Reselect the currently selected piece. Recalc its moves and recolor it if needed.
 
         // Edit the clocks
@@ -400,11 +403,6 @@ const onlinegame = (function() {
         stopOpponentAFKCountdown(); // The opponent is no longer AFK if they were
         flashTabNameYOUR_MOVE(true);
         scheduleMoveSound_timeoutID();
-
-        
-        premove.submitPremove(gamefile);
-
-        premove.showPremoves(gamefile);
 
         guipause.onReceiveOpponentsMove(); // Update the pause screen buttons
     }
