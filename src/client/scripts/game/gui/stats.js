@@ -58,11 +58,11 @@ function setTextContentOfMoves( ) {
     if(premove.isPremove(gamefile)) {
         const currentPremove = premove.getPremoveCountAtIndex(gamefile);
         const totalPremoveCount = gamefile.premoves.length;
-        stats.elementStatusMoves.textContent = `${translations.premove_counter} ${currentPremove}/${totalPremoveCount}`;
+        elementStatusMoves.textContent = `${translations.premove_counter} ${currentPremove}/${totalPremoveCount}`;
     } else {
         const currentPly = gamefile.moveIndex + 1;
         const totalPlyCount = premove.getPlyCountExcludingPremoves(gamefile);
-        stats.elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
+        elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
     }
 }
 
