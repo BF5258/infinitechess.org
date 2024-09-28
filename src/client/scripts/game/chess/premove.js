@@ -22,9 +22,6 @@ import buffermodel from '../rendering/buffermodel.js'
 /**
  * TODO:
  * Rendering highlights should be in a separate module.
- * Copy game doesn't know how to handle premoves. Possible solutions:
- *  - remove premoves before export
- *  - add a comment {premoves} so import game knows they were not actual moves
  * Fix circular dependencies:
  *   onlinegame calls premove.submitPremove
  *   premove calls onlinegame.sendMove

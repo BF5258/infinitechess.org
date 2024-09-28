@@ -16,6 +16,7 @@ import statustext from '../gui/statustext.js';
 import jsutil from '../misc/jsutil.js';
 import docutil from '../misc/docutil.js';
 import winconutil from '../misc/winconutil.js';
+import premove from './premove.js';
 // Import End
 
 "use strict";
@@ -40,6 +41,9 @@ const retainMetadataWhenPasting = ['White','Black','TimeControl','Event','Site',
  */
 function callbackCopy(event) {
     const gamefile = game.getGamefile();
+
+    premove.hidePremoves(gamefile);
+
     const Variant = gamefile.metadata.Variant;
 
     const primedGamefile = primeGamefileForCopying(gamefile);
@@ -49,6 +53,8 @@ function callbackCopy(event) {
         
     docutil.copyToClipboard(shortformat);
     statustext.showStatus(translations.copypaste.copied_game);
+
+    premove.showPremoves(gamefile);
 }
 
 /**
