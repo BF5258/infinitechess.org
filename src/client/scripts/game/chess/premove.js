@@ -118,9 +118,9 @@ function isMoveLegal(gamefile, move) {
     if(piece.type != move.type)
         return false; //The piece we had premoved no longer exists
     let legalMoves = legalmoves.calculate(gamefile, piece);
-    const a = legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
+    const moveLegal = legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
     specialdetect.transferSpecialFlags_FromCoordsToMove(move.endCoords, move);
-    return a;
+    return moveLegal;
 }
 
 //Should not be in premoves.js:

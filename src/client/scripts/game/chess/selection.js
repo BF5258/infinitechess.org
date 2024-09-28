@@ -113,8 +113,8 @@ function update() {
     const gamefile = game.getGamefile();
     // if (onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn(gamefile)) return; // Not our turn
     if (input.isMouseDown_Right()) {
-        premove.clearPremoves(gamefile);
-        return unselectPiece(); // Right-click deselects everything
+        if (pieceSelected) return unselectPiece(); // Right-click deselects everything
+        else return premove.clearPremoves(gamefile);
     }
     if (pawnIsPromoting) { // Do nothing else this frame but wait for a promotion piece to be selected
         if (promoteTo) makePromotionMove();
