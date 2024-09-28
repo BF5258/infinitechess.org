@@ -272,7 +272,7 @@ function incrementMoveRule(gamefile, typeMoved, wasACapture) {
  * - `doGameOverChecks`: Whether game-over checks such as checkmate, or other win conditions, are performed for this move.
  */
 function flipWhosTurn(gamefile, { pushClock = true, doGameOverChecks = true } = {}) {
-    gamefile.whosTurn = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex);
+    gamefile.whosTurn = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex - gamefile.premovesVisible);
     if (doGameOverChecks) guigameinfo.updateWhosTurn(gamefile);
     if (pushClock) clock.push();
 }
