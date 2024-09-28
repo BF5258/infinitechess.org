@@ -8,6 +8,7 @@ import game from './game.js';
 import movepiece from './movepiece.js';
 import gamefileutility from './gamefileutility.js';
 import legalmoves from './legalmoves.js';
+import specialdetect from './specialdetect.js';
 // Circular dependent. Needs fixing.
 import onlinegame from '../misc/onlinegame.js';
 // Rendering highlights should be in different module:
@@ -20,8 +21,16 @@ import buffermodel from '../rendering/buffermodel.js'
 
 /**
  * TODO:
- * en passanting premoves don't remove the captured pawn.
  * Rendering highlights should be in a separate module.
+ * Copy game doesn't know how to handle premoves. Possible solutions:
+ *  - remove premoves before export
+ *  - add a comment {premoves} so import game knows they were not actual moves
+ * Fix circular dependencies:
+ *   onlinegame calls premove.submitPremove
+ *   premove calls onlinegame.sendMove
+ * I got the folling error message. I don't know the cause yet.
+ *   Client submitted a move with incorrect move number! Expected: 6   Message: {"move":"3,7>2,8Q","moveNumber":7,"gameConclusion":false}. Socket: {"browser-id":"2316624065bm","id":"2kqp4fiwcukj","IP":"::1","subscriptions":{"game":{"id":"u9aeq","color":"white"}}}
+ *   Cannot resync client to game because they tried to resync to a game with id undefined when they belong to game with id u9aeq!
  */
 
 /**
@@ -74,8 +83,7 @@ function arePremovesAllowed() {
  * Submits the next premove to the server if it is legal;
  * otherwise, deletes the queue.
  * 
- * Only call function this when the legality of the premove can be verified(on our turn);
- * otherwise the move is deemed illegal.
+ * Only call this on our turn!
  */
 function submitPremove(gamefile) {
     if(gamefile.premovesVisible) {
@@ -108,12 +116,14 @@ function submitPremove(gamefile) {
  * @returns {boolean}
  */
 function isMoveLegal(gamefile, move) {
-    if(!onlinegame.isItOurTurn()) return false;
+    if(!onlinegame.isItOurTurn()) return console.error('We cannot submit a premove until it is our turn.');
     let piece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
     if(piece.type != move.type)
         return false; //The piece we had premoved no longer exists
     let legalMoves = legalmoves.calculate(gamefile, piece);
-    return legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
+    const a = legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
+    specialdetect.transferSpecialFlags_FromCoordsToMove(move.endCoords, move);
+    return a;
 }
 
 //Should not be in premoves.js:
