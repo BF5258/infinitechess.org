@@ -40,7 +40,7 @@ const AUTO_AFK_RESIGN = false || !DEV_BUILD;
  * 
  * THIS SHOULD ALWAYS MATCH src/client/scripts/game/config.GAME_VERSION
  */
-const GAME_VERSION = "1.4.1";
+const GAME_VERSION = "1.4.3";
 
 /** Whether we are currently using a whitelist for connections from other origins.
  * If we are getting unwanted origins, this can be enabled. */
@@ -52,12 +52,12 @@ const allowedOrigins = [ // Allowed sites
 ];
 
 export {
-    DEV_BUILD,
-    BUNDLE_FILES,
-    ARE_RATE_LIMITING,
-    simulatedWebsocketLatencyMillis,
-    HOST_NAME,
-    GAME_VERSION,
-    useOriginWhitelist,
-    allowedOrigins
+	DEV_BUILD,
+	BUNDLE_FILES,
+	ARE_RATE_LIMITING,
+	simulatedWebsocketLatencyMillis,
+	HOST_NAME,
+	GAME_VERSION,
+	useOriginWhitelist,
+	allowedOrigins
 };
