@@ -249,8 +249,9 @@ function addPossibleEnPassant(gamefile, individualMoves, coords, color) {
  * @param {number[]} coords - Coordinates of the rose selected
  * @param {string} color - The color of the rose selected
  * @param {array[]} individualMoves - The legal individual moves calculated so far
+ * @param {boolean} [isPremove=false] - Ignore obstructions for premoves
  */
-function roses(gamefile, coords, color, individualMoves) {
+function roses(gamefile, coords, color, individualMoves, isPremove=false) {
 	const movements = [[-2, -1], [-1, -2], [1, -2], [2, -1], [2, 1], [1, 2], [-1, 2], [-2, 1]]; // Counter-clockwise
 	const directions = [1, -1]; // Counter-clockwise and clockwise directions
 
@@ -261,12 +262,14 @@ function roses(gamefile, coords, color, individualMoves) {
 			for (let c = 0; c < movements.length - 1; c++) { // Iterate 7 times, since we can't land on the square we started
 				const movement = movements[math.posMod(b, movements.length)];
 				currentCoord = coordutil.addCoordinates(currentCoord, movement);
-				const pieceOnSquare = gamefileutility.getPieceAtCoords(gamefile, currentCoord); // { type, index, coords }
-				if (pieceOnSquare) {
-					const colorOfPiece = colorutil.getPieceColorFromType(pieceOnSquare.type);
-					// eslint-disable-next-line max-depth
-					if (color !== colorOfPiece) appendCoordToIndividuals(individualMoves, currentCoord); // Capture is legal
-					break;
+				if(!isPremove) { //Ignore obstructions when premoving
+					const pieceOnSquare = gamefileutility.getPieceAtCoords(gamefile, currentCoord); // { type, index, coords }
+					if (pieceOnSquare) {
+						const colorOfPiece = colorutil.getPieceColorFromType(pieceOnSquare.type);
+						// eslint-disable-next-line max-depth
+						if (color !== colorOfPiece) appendCoordToIndividuals(individualMoves, currentCoord); // Capture is legal
+						break;
+					}
 				}
 				// There is not a piece
 				appendCoordToIndividuals(individualMoves, currentCoord);
