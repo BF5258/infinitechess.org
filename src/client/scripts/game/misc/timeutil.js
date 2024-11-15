@@ -138,6 +138,22 @@ function getCurrentDay() {
 	return `${year}-${month}-${day}`;
 }
 
+/**
+ * Checks if the current date is within a specified date range.
+ * @param {number} startMonth - The starting month of the range (1-12).
+ * @param {number} startDay - The starting day of the range (1-31).
+ * @param {number} endMonth - The ending month of the range (1-12).
+ * @param {number} endDay - The ending day of the range (1-31).
+ * @returns {boolean} True if the current date is within the specified range; otherwise, false.
+ */
+function isCurrentDateWithinRange(startMonth, startDay, endMonth, endDay) {
+	const currentDate = new Date();
+	const today = new Date(currentDate.getFullYear(), currentDate.getMonth(), currentDate.getDate()); // Normalized current date
+	const startDate = new Date(currentDate.getFullYear(), startMonth - 1, startDay);
+	const endDate = new Date(currentDate.getFullYear(), endMonth - 1, endDay);
+	return today >= startDate && today <= endDate;
+}
+
 export default {
 	minutesToMillis,
 	secondsToMillis,
@@ -148,4 +164,5 @@ export default {
 	getTotalMilliseconds,
 	getCurrentMonth,
 	getCurrentDay,
+	isCurrentDateWithinRange,
 };

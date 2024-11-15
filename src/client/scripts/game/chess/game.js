@@ -13,6 +13,7 @@ import guipause from '../gui/guipause.js';
 import input from '../input.js';
 import miniimage from '../rendering/miniimage.js';
 import clock from '../misc/clock.js';
+import guiclock from '../gui/guiclock.js';
 import piecesmodel from '../rendering/piecesmodel.js';
 import movement from '../rendering/movement.js';
 import selection from './selection.js';
@@ -33,6 +34,10 @@ import guigameinfo from '../gui/guigameinfo.js';
 import loadbalancer from '../misc/loadbalancer.js';
 import gamerules from '../variants/gamerules.js';
 import jsutil from '../misc/jsutil.js';
+import statustext from '../gui/statustext.js';
+import docutil from '../misc/docutil.js';
+import winconutil from '../misc/winconutil.js';
+import sound from '../misc/sound.js';
 // Import End
 
 /** 
@@ -73,6 +78,15 @@ function init() {
 	guititle.open();
 
 	board.recalcTileWidth_Pixels(); // Without this, the first touch tile is NaN
+
+	// Change the theme to match the current holliday
+	options.toggleHollidayTheme();
+
+	// If a holliday theme is active, tell the user how to disable it.
+	if (options.isHollidayTheme()) {
+		if (docutil.isMouseSupported()) statustext.showStatus(translations.disable_holiday_theme_desktop);
+		else statustext.showStatus(translations.disable_holiday_theme_mobile);
+	}
 }
 
 // Initiates our textures, and our spritesheet data (where each piece's texture is located)
@@ -96,9 +110,9 @@ function updateVariablesAfterScreenResize() {
 function update() {
 	if (input.isKeyDown('`')) options.toggleDeveloperMode();
 	if (input.isKeyDown('2')) console.log(jsutil.deepCopyObject(gamefile));
-	// if (input.isKeyDown('enter')) options.toggleChristmasTheme()
+	if (input.isKeyDown('enter')) options.toggleHollidayTheme();
 	if (input.isKeyDown('m')) options.toggleFPS();
-	if (getGamefile()?.mesh.locked && input.isKeyDown('z')) loadbalancer.setForceCalc(true);
+	if (gamefile?.mesh.locked && input.isKeyDown('z')) loadbalancer.setForceCalc(true);
 
 	if (gui.getScreen().includes('title')) updateTitleScreen();
 	else updateBoard(); // Other screen, board is visible, update everything board related
@@ -120,10 +134,15 @@ function updateBoard() {
 	if (input.isKeyDown('1')) options.toggleEM(); // EDIT MODE TOGGLE
 	if (input.isKeyDown('escape')) guipause.toggle();
 	if (input.isKeyDown('tab')) guipause.callback_TogglePointers();
-	if (input.isKeyDown('r')) piecesmodel.regenModel(getGamefile(), options.getPieceRegenColorArgs(), true);
+	if (input.isKeyDown('r')) piecesmodel.regenModel(gamefile, options.getPieceRegenColorArgs(), true);
 	if (input.isKeyDown('n')) options.toggleNavigationBar();
 
-	clock.update();
+	const timeWinner = clock.update(gamefile);
+	if (timeWinner) { // undefined if no clock has ran out
+		gamefile.gameConclusion = `${timeWinner} time`;
+		concludeGame();
+	}
+	guiclock.update(gamefile);
 	miniimage.testIfToggled();
 	animation.update();
 	if (guipause.areWePaused() && !onlinegame.areInOnlineGame()) return;
@@ -196,15 +215,20 @@ function loadGamefile(newGamefile) {
 	guipromotion.initUI(gamefile.gameRules.promotionsAllowed);
 
 	// Regenerate the mesh of all the pieces.
-	piecesmodel.regenModel(getGamefile(), options.getPieceRegenColorArgs());
+	piecesmodel.regenModel(gamefile, options.getPieceRegenColorArgs());
 
 	guinavigation.update_MoveButtons();
 
 	guigameinfo.updateWhosTurn(gamefile);
 	// Immediately conclude the game if we loaded a game that's over already
-	if (gamefileutility.isGameOver(gamefile)) gamefileutility.concludeGame(gamefile, gamefile.gameConclusion);
+	if (gamefileutility.isGameOver(gamefile)) {
+		concludeGame();
+		onlinegame.requestRemovalFromPlayersInActiveGames();
+	}
 
 	initListeners();
+
+	guiclock.set(newGamefile);
 }
 
 /** The canvas will no longer render the current game */
@@ -217,6 +241,9 @@ function unloadGame() {
 	transition.eraseTelHist();
 	board.updateTheme(); // Resets the board color (the color changes when checkmate happens)
 	closeListeners();
+
+	// Clock data is unloaded with gamefile now, just need to reset gui. Not our problem ¯\_(ツ)_/¯
+	guiclock.resetClocks();
 }
 
 /** Called when a game is loaded, loads the event listeners for when we are in a game. */
@@ -231,6 +258,35 @@ function closeListeners() {
 	document.removeEventListener('paste', copypastegame.callbackPaste);
 }
 
+/**
+ * Ends the game. Call this when the game is over by the used win condition.
+ * Stops the clocks, darkens the board, displays who won, plays a sound effect.
+ */
+function concludeGame() {
+	if (winconutil.isGameConclusionDecisive(gamefile.gameConclusion)) movesscript.flagLastMoveAsMate(gamefile);
+	clock.endGame(gamefile);
+	guiclock.stopClocks(gamefile);
+	board.darkenColor();
+	guigameinfo.gameEnd(gamefile.gameConclusion);
+	onlinegame.onGameConclude();
+
+	const delayToPlayConcludeSoundSecs = 0.65;
+	if (!onlinegame.areInOnlineGame()) {
+		if (!gamefile.gameConclusion.includes('draw')) sound.playSound_win(delayToPlayConcludeSoundSecs);
+		else sound.playSound_draw(delayToPlayConcludeSoundSecs);
+	} else { // In online game
+		if (gamefile.gameConclusion.includes(onlinegame.getOurColor())) sound.playSound_win(delayToPlayConcludeSoundSecs);
+		else if (gamefile.gameConclusion.includes('draw') || gamefile.gameConclusion.includes('aborted')) sound.playSound_draw(delayToPlayConcludeSoundSecs);
+		else sound.playSound_loss(delayToPlayConcludeSoundSecs);
+	}
+	
+	// Set the Result and Condition metadata
+	gamefileutility.setTerminationMetadata(gamefile);
+
+	selection.unselectPiece();
+	guipause.updateTextOfMainMenuButton();
+}
+
 
 export default {
 	getGamefile,
@@ -240,5 +296,6 @@ export default {
 	update,
 	render,
 	loadGamefile,
-	unloadGame
+	unloadGame,
+	concludeGame,
 };

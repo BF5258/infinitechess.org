@@ -53,7 +53,7 @@ function hideMoves() {
 	if (visibilityWeight === 0) style.hideElement(elementStatusMoves);
 }
 
-function setTextContentOfMoves( ) {
+function setTextContentOfMoves() {
 	const gamefile = game.getGamefile()
 	if(premove.isPremove(gamefile)) {
 		const currentPremove = premove.getPremoveCountAtIndex(gamefile);
@@ -136,4 +136,5 @@ export default {
 	showRotateMesh,
 	updateRotateMesh,
 	hideRotateMesh,
+	setTextContentOfMoves,
 };

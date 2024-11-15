@@ -16,7 +16,7 @@ if (!DEV_BUILD && !BUNDLE_FILES) throw new Error("BUNDLE_FILES must be true in p
 
 /** Whether we are currently rate limiting connections.
  * Only disable temporarily for development purposes. */
-const ARE_RATE_LIMITING = true; // Set to false to temporarily get around it, during development.
+const ARE_RATE_LIMITING = !DEV_BUILD || false; // Set to false to temporarily get around it, during development.
 if (!DEV_BUILD && !ARE_RATE_LIMITING) throw new Error("ARE_RATE_LIMITING must be true in production!!");
 
 /** 
@@ -40,7 +40,7 @@ const AUTO_AFK_RESIGN = false || !DEV_BUILD;
  * 
  * THIS SHOULD ALWAYS MATCH src/client/scripts/game/config.GAME_VERSION
  */
-const GAME_VERSION = "1.4.3";
+const GAME_VERSION = "1.4.4";
 
 /** Whether we are currently using a whitelist for connections from other origins.
  * If we are getting unwanted origins, this can be enabled. */

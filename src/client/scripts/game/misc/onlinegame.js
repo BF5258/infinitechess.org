@@ -7,6 +7,7 @@ import guinavigation from '../gui/guinavigation.js';
 import drawoffers from './drawoffers.js';
 import guititle from '../gui/guititle.js';
 import clock from './clock.js';
+import guiclock from '../gui/guiclock.js';
 import statustext from '../gui/statustext.js';
 import movepiece from '../chess/movepiece.js';
 import game from '../chess/game.js';
@@ -144,10 +145,10 @@ function updateAFK() {
 function rescheduleAlertServerWeAFK() {
 	clearTimeout(afk.timeoutID);
 	const gamefile = game.getGamefile();
-	if (!isItOurTurn() || gamefileutility.isGameOver(gamefile) || isPrivate && clock.isGameUntimed() || !clock.isGameUntimed() && movesscript.isGameResignable(gamefile)) return;
+	if (!isItOurTurn() || gamefileutility.isGameOver(gamefile) || isPrivate && clock.isGameUntimed(gamefile) || !clock.isGameUntimed(gamefile) && movesscript.isGameResignable(gamefile)) return;
 	// Games with less than 2 moves played more-quickly start the AFK auto resign timer
-	const timeUntilAFKSecs = !movesscript.isGameResignable(game.getGamefile()) ? afk.timeUntilAFKSecs_Abortable
-		: clock.isGameUntimed() ? afk.timeUntilAFKSecs_Untimed
+	const timeUntilAFKSecs = !movesscript.isGameResignable(gamefile) ? afk.timeUntilAFKSecs_Abortable
+		: clock.isGameUntimed(gamefile) ? afk.timeUntilAFKSecs_Untimed
 			: afk.timeUntilAFKSecs;
 	afk.timeoutID = setTimeout(tellServerWeAFK, timeUntilAFKSecs * 1000);
 }
@@ -232,8 +233,10 @@ function onmessage(data) { // { sub, action, value, id }
 			break;
 		case "clock": { // Contain this case in a block so that it's variables are not hoisted 
 			if (!inOnlineGame) return;
-			const message = data.value; // { timerWhite, timerBlack, timeNextPlayerLosesAtAt }
-			clock.edit(message.timerWhite, message.timerBlack, message.timeNextPlayerLosesAt); // Edit the clocks
+			const message = data.value; // { clockValues: { timerWhite, timerBlack, timeNextPlayerLosesAtAt } }
+			const gamefile = game.getGamefile();
+			clock.edit(gamefile, message.clockValues); // Edit the clocks
+			guiclock.edit(gamefile);
 			break;
 		} case "gameupdate": // When the game has ended by time/disconnect/resignation/aborted, OR we are resyncing to the game.
 			handleServerGameUpdate(data.value);
@@ -246,7 +249,8 @@ function onmessage(data) { // { sub, action, value, id }
 			statustext.showStatus(translations.onlinegame.not_logged_in, true, 100);
 			websocket.getSubs().game = false;
 			inSync = false;
-			clock.stop();
+			clock.endGame(game.getGamefile());
+			guiclock.stopClocks(game.getGamefile());
 			game.getGamefile().gameConclusion = 'limbo';
 			selection.unselectPiece();
 			board.darkenColor();
@@ -255,7 +259,9 @@ function onmessage(data) { // { sub, action, value, id }
 			statustext.showStatus(translations.onlinegame.game_no_longer_exists, false, 1.5);
 			websocket.getSubs().game = false;
 			inSync = false;
-			gamefileutility.concludeGame(game.getGamefile(), 'aborted', { requestRemovalFromActiveGames: false });
+			game.getGamefile().gameConclusion = 'aborted';
+			game.concludeGame();
+			requestRemovalFromPlayersInActiveGames();
 			break;
 		case "leavegame": // Another window connected
 			statustext.showStatus(translations.onlinegame.another_window_connected);
@@ -263,7 +269,6 @@ function onmessage(data) { // { sub, action, value, id }
 			inSync = false;
 			closeOnlineGame();
 			game.unloadGame();
-			clock.reset();
 			guinavigation.close();
 			guititle.open();
 			break;
@@ -356,8 +361,8 @@ function handleJoinGame(message) {
 	// The server's message looks like:
 	// {
 	//     metadata: { Variant, White, Black, TimeControl, UTCDate, UTCTime, Rated },
-	//     id, clock, publicity, youAreColor, timerWhite,
-	//     timerBlack, moves, autoAFKResignTime, disconnect, gameConclusion, drawOffer
+	//	   clockValues: { timerWhite, timerBlack, timeNextPlayerLosesAt }
+	//     id, clock, publicity, youAreColor, , moves, autoAFKResignTime, disconnect, gameConclusion, drawOffer,
 	// }
 	
 	// We were auto-unsubbed from the invites list, BUT we want to keep open the socket!!
@@ -428,10 +433,14 @@ function handleOpponentsMove(message) { // { move, gameConclusion, moveNumber, t
 	selection.reselectPiece(); // Reselect the currently selected piece. Recalc its moves and recolor it if needed.
 	
 	// Edit the clocks
-	clock.edit(message.timerWhite, message.timerBlack, message.timeNextPlayerLosesAt);
+	clock.edit(gamefile, message.clockValues);
+	guiclock.edit(gamefile);
 	
 	// For online games, we do NOT EVER conclude the game, so do that here if our opponents move concluded the game
-	if (gamefileutility.isGameOver(gamefile)) gamefileutility.concludeGame(gamefile);
+	if (gamefileutility.isGameOver(gamefile)) {
+		game.concludeGame();
+		requestRemovalFromPlayersInActiveGames();
+	}
 	
 	rescheduleAlertServerWeAFK();
 	stopOpponentAFKCountdown(); // The opponent is no longer AFK if they were
@@ -478,7 +487,7 @@ function resyncToGame() {
  * @param {Object} messageContents - The contents of the server message, with the properties:
  * `gameConclusion`, `timerWhite`,`timerBlack`, `moves`, `autoAFKResignTime`, `offerDraw`
  */
-function handleServerGameUpdate(messageContents) { // { gameConclusion, timerWhite, timerBlack, timeNextPlayerLosesAt, moves, autoAFKResignTime, offerDraw }
+function handleServerGameUpdate(messageContents) { // { gameConclusion, clockValues: { timerWhite, timerBlack, timeNextPlayerLosesAt }, moves, autoAFKResignTime, offerDraw }
 	if (!inOnlineGame) return;
 	const gamefile = game.getGamefile();
 	const claimedGameConclusion = messageContents.gameConclusion;
@@ -512,9 +521,12 @@ function handleServerGameUpdate(messageContents) { // { gameConclusion, timerWhi
 	gamefile.gameConclusion = claimedGameConclusion;
 	
 	// When the game has ended by time/disconnect/resignation/aborted
-	clock.edit(messageContents.timerWhite, messageContents.timerBlack, messageContents.timeNextPlayerLosesAt);
+	clock.edit(gamefile, messageContents.clockValues);
 	
-	if (gamefileutility.isGameOver(gamefile)) gamefileutility.concludeGame(gamefile);
+	if (gamefileutility.isGameOver(gamefile)) {
+		game.concludeGame();
+		requestRemovalFromPlayersInActiveGames();
+	}
 }
 
 /**

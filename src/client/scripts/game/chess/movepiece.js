@@ -5,6 +5,7 @@ import gamefileutility from './gamefileutility.js';
 import specialdetect from './specialdetect.js';
 import arrows from '../rendering/arrows.js';
 import clock from '../misc/clock.js';
+import guiclock from '../gui/guiclock.js';
 import organizedlines from './organizedlines.js';
 import animation from '../rendering/animation.js';
 import guinavigation from '../gui/guinavigation.js';
@@ -17,6 +18,9 @@ import colorutil from '../misc/colorutil.js';
 import jsutil from '../misc/jsutil.js';
 import coordutil from '../misc/coordutil.js';
 import frametracker from '../rendering/frametracker.js';
+import stats from '../gui/stats.js';
+import onlinegame from '../misc/onlinegame.js';
+import game from './game.js';
 // Import End
 
 /** 
@@ -82,10 +86,14 @@ function makeMove(gamefile, move, { flipTurn = true, recordMove = true, pushCloc
 
 	// ALWAYS DO THIS NOW, no matter what. 
 	updateInCheck(gamefile, recordMove);
-	if (doGameOverChecks) gamefileutility.updateGameConclusion(gamefile, { concludeGameIfOver, simulated });
+	if (doGameOverChecks) {
+		gamefileutility.doGameOverChecks(gamefile);
+		if (!simulated && concludeGameIfOver && gamefile.gameConclusion && !onlinegame.areInOnlineGame()) game.concludeGame();
+	}
 
 	if (updateData) {
 		guinavigation.update_MoveButtons();
+		stats.setTextContentOfMoves(); // Making a move should change the move number in the stats
 		frametracker.onVisualChange();
 	}
 
@@ -274,7 +282,10 @@ function incrementMoveRule(gamefile, typeMoved, wasACapture) {
 function flipWhosTurn(gamefile, { pushClock = true, doGameOverChecks = true } = {}) {
 	gamefile.whosTurn = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex - gamefile.premovesVisible);
 	if (doGameOverChecks) guigameinfo.updateWhosTurn(gamefile);
-	if (pushClock) clock.push();
+	if (pushClock) {
+		clock.push(gamefile);
+		guiclock.push(gamefile);
+	};
 }
 
 /**
@@ -328,8 +339,8 @@ function makeAllMovesInGame(gamefile, moves) {
 	}
 
 	if (moves.length === 0) updateInCheck(gamefile, false);
-	// Perform game over checks.
-	gamefileutility.updateGameConclusion(gamefile, { concludeGameIfOver: false });
+
+	gamefileutility.doGameOverChecks(gamefile); // Update the gameConclusion
 }
 
 /**
