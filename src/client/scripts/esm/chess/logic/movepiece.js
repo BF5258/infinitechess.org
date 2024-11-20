@@ -59,17 +59,17 @@ import game from '../../game/chess/game.js';
  * - `updateProperties`: Whether to update gamefile properties that game-over algorithms rely on, such as the 50-move-rule's status, or 3-Check's check counter.
  * - `simulated`: Whether you plan on undo'ing this move. If true, the `rewindInfo` property will be added to the `move` for easy restoring of the gamefile's properties when undo'ing the move.
  */
-function makeMove(gamefile, move, { flipTurn = true, recordMove = true, pushClock = true, doGameOverChecks = true, concludeGameIfOver = true, animate = true, updateData = true, updateProperties = true, simulated = false } = {}) {                
+function makeMove(gamefile, move, { flipTurn = true, recordMove = true, pushClock = true, doGameOverChecks = true, concludeGameIfOver = true, animate = true, updateData = true, updateProperties = true, simulated = false } = {}) {
 	const piece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
 	if (!piece) throw new Error(`Cannot make move because no piece exists at coords ${move.startCoords}.`);
 	move.type = piece.type;
 	const trimmedType = colorutil.trimColorExtensionFromType(move.type); // "queens"
-    
+	
 	storeRewindInfoOnMove(gamefile, move, piece.index, { simulated }); // Keep track if important stuff to remember, for rewinding the game if we undo moves
 
 	// Do this before making the move, so that if its a pawn double push, enpassant can be reinstated and not deleted.
 	if (recordMove || updateProperties) deleteEnpassantAndSpecialRightsProperties(gamefile, move.startCoords, move.endCoords);
-    
+	
 	let specialMoveMade;
 	if (gamefile.specialMoves[trimmedType]) specialMoveMade = gamefile.specialMoves[trimmedType](gamefile, piece, move, { updateData, animate, updateProperties, simulated });
 	if (!specialMoveMade) movePiece_NoSpecial(gamefile, piece, move, { updateData, recordMove, animate, simulated }); // Move piece regularly (no special tag)
@@ -265,7 +265,7 @@ function deletePiece(gamefile, piece, { updateData = true } = {}) { // piece: { 
  */
 function incrementMoveRule(gamefile, typeMoved, wasACapture) {
 	if (!gamefile.gameRules.moveRule) return; // Not using the move-rule
-    
+	
 	// Reset if it was a capture or pawn movement
 	if (wasACapture || typeMoved.startsWith('pawns')) gamefile.moveRuleState = 0;
 	else gamefile.moveRuleState++;
@@ -280,7 +280,7 @@ function incrementMoveRule(gamefile, typeMoved, wasACapture) {
  * - `doGameOverChecks`: Whether game-over checks such as checkmate, or other win conditions, are performed for this move.
  */
 function flipWhosTurn(gamefile, { pushClock = true, doGameOverChecks = true } = {}) {
-	gamefile.whosTurn = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex);
+	gamefile.whosTurn = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex - gamefile.premovesVisible);
 	if (doGameOverChecks) guigameinfo.updateWhosTurn(gamefile);
 	if (pushClock) {
 		clock.push(gamefile);
@@ -291,12 +291,12 @@ function flipWhosTurn(gamefile, { pushClock = true, doGameOverChecks = true } = 
 /**
  * Updates the `inCheck` and `attackers` properties of the gamefile after making a move or rewinding.
 
-    * Needs to be called AFTER flipping the `whosTurn` property.
-    * @param {gamefile} gamefile - The gamefile
-    * @param {boolean} [flagMoveAsCheck] - If *true*, flags the last played move as a check. Default: true
-    */
+	* Needs to be called AFTER flipping the `whosTurn` property.
+	* @param {gamefile} gamefile - The gamefile
+	* @param {boolean} [flagMoveAsCheck] - If *true*, flags the last played move as a check. Default: true
+	*/
 function updateInCheck(gamefile, flagMoveAsCheck = true) {
-
+	//if(premove.isPremove(gamefile)) return; //Being checked by a premove doesn't really make sence. The piece hasn't actually moved yet.
 	let attackers = undefined;
 	// Only pass in attackers array to be filled by the checking pieces if we're using checkmate win condition.
 	const whosTurnItWasAtMoveIndex = movesscript.getWhosTurnAtMoveIndex(gamefile, gamefile.moveIndex);
@@ -322,7 +322,7 @@ function updateInCheck(gamefile, flagMoveAsCheck = true) {
  */
 function makeAllMovesInGame(gamefile, moves) {
 	if (gamefile.moveIndex !== -1) throw new Error("Cannot make all moves in game when we're not at the beginning.");
-        
+		
 	for (let i = 0; i < moves.length; i++) {
 
 		const shortmove = moves[i];
@@ -375,7 +375,7 @@ function calculateMoveFromShortmove(gamefile, shortmove) {
 
 	const selectedPiece = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
 	if (!selectedPiece) return move; // Return without any special move properties, this will automatically be an illegal move.
-    
+	
 	const legalSpecialMoves = legalmoves.calculate(gamefile, selectedPiece, { onlyCalcSpecials: true }).individual;
 	for (let i = 0; i < legalSpecialMoves.length; i++) {
 		const thisCoord = legalSpecialMoves[i];
@@ -444,13 +444,13 @@ function rewindGameToIndex(gamefile, moveIndex, { removeMove = true, updateData 
  * - `removeMove`: Whether to delete the move from the gamefile's move list. Should be true if we're undo'ing simulated moves.
  * - `animate`: Whether to animate this rewinding.
  */
-function rewindMove(gamefile, { updateData = true, removeMove = true, animate = true } = {}) {
+function rewindMove(gamefile, { updateData = true, removeMove = true, animate = true, flipTurn = true } = {}) {
 
 	const move = movesscript.getMoveFromIndex(gamefile.moves, gamefile.moveIndex); // { type, startCoords, endCoords, captured }
 	const trimmedType = colorutil.trimColorExtensionFromType(move.type);
 
 	let isSpecialMove = false;
-	if (gamefile.specialUndos[trimmedType]) isSpecialMove = gamefile.specialUndos[trimmedType](gamefile, move, { updateData, animate });
+	if (gamefile.specialUndos[trimmedType]) isSpecialMove = gamefile.specialUndos[trimmedType](gamefile, move, { updateData, restoreRights:removeMove, animate });
 	if (!isSpecialMove) rewindMove_NoSpecial(gamefile, move, { updateData, animate });
 
 	// inCheck and attackers are always restored, no matter if we're deleting the move or not.
@@ -479,7 +479,7 @@ function rewindMove(gamefile, { updateData = true, removeMove = true, animate = 
 	if (removeMove) movesscript.deleteLastMove(gamefile.moves);
 	gamefile.moveIndex--;
 
-	if (removeMove) flipWhosTurn(gamefile, { pushClock: false, doGameOverChecks: false });
+	if (removeMove && flipTurn) flipWhosTurn(gamefile, { pushClock: false, doGameOverChecks: false });
 
 	// if (animate) updateInCheck(gamefile, false)
 	// No longer needed, as rewinding the move restores the inCheck property.
@@ -527,7 +527,7 @@ function rewindMove_NoSpecial(gamefile, move, { updateData = true, animate = tru
 function simulateMove(gamefile, move, colorToTestInCheck, { doGameOverChecks = false } = {}) {
 	// Moves the piece without unselecting it or regenerating the pieces model.
 	makeMove(gamefile, move, { pushClock: false, animate: false, updateData: false, simulated: true, doGameOverChecks, updateProperties: doGameOverChecks });
-    
+	
 	// What info can we pull from the game after simulating this move?
 	const info = {
 		isCheck: doGameOverChecks ? gamefile.inCheck : checkdetection.detectCheck(gamefile, colorToTestInCheck, []),

@@ -132,9 +132,9 @@ function initListeners() {
 
 function checkIfMouseNotSupported() {
 	if (docutil.isMouseSupported()) return;
-    
+	
 	// Mouse not supported
-    
+	
 	mouseIsSupported = false;
 	console.log("Mouse is not supported on this device. Disabling perspective mode.");
 
@@ -268,7 +268,7 @@ function touchHelds_DeleteTouch(id) {
 			break;
 		}
 	}
-    
+	
 	// Also remove it from touchDowns if it exists. Low chance, but on occasion when we add and remove a touch on the same frame, it is left in the touchDowns but is not found in touchHelds which produces errors.
 	for (let i = 0; i < touchDowns.length; i++) {
 		const thisTouch = touchDowns[i];
@@ -289,7 +289,7 @@ function initListeners_Mouse() {
 		// pieces to change their opacity. The exception is if we're paused.
 		const renderThisFrame = !guipause.areWePaused() && (arrows.getMode() !== 0 || movement.isScaleLess1Pixel_Virtual() || selection.isAPieceSelected() || perspective.getEnabled());
 		if (renderThisFrame) frametracker.onVisualChange();
-        
+		
 		const mouseCoords = convertCoords_CenterOrigin(event);
 		mousePos = mouseCoords;
 		mouseMoved = true;
@@ -326,7 +326,7 @@ function initListeners_Mouse() {
 
 		if (event.target.id === 'overlay') event.preventDefault();
 		// if (clickedOverlay) gui.makeOverlayUnselectable();
-        
+		
 		pushMouseDown(event);
 
 		// Update mouse world location
@@ -377,7 +377,7 @@ function initMouseSimulatedClick() {
 	if (perspective.getEnabled() && !perspective.isMouseLocked()) return;
 
 	// Start the timer of when a simulated click is registered
-    
+	
 	timeMouseDownSeconds = new Date().getTime() / 1000;
 	mouseClickedTile = space.convertWorldSpaceToCoords_Rounded(mouseWorldLocation);
 	mouseClickedPixels = mousePos;
@@ -398,7 +398,7 @@ function executeMouseSimulatedClick() {
 	const dy = mousePos[1] - mouseClickedPixels[1];
 	const d = Math.hypot(dx, dy);
 	if (d > pixelDistToCancelClick) return; // Don't simulate click
-    
+	
 	mouseClicked = true; // Simulate click
 }
 
@@ -416,7 +416,7 @@ function calcMouseWorldLocation_Mouse() {
 	// Need this for black's perspective to work in orthographic mode?
 	const n = perspective.getIsViewingBlackPerspective() ? -1 : 1;
 	// const n = 1;
-        
+	
 	const halfCanvasWidth = camera.getCanvasWidthVirtualPixels() / 2;
 	const halfCanvasHeight = camera.getCanvasHeightVirtualPixels() / 2;
 	const boundingBoxToUse = options.isDebugModeOn() ? camera.getScreenBoundingBox(true) : camera.getScreenBoundingBox(false);
@@ -439,7 +439,7 @@ function calcCrosshairWorldLocation() {
 
 	const rotX = (Math.PI / 180) * perspective.getRotX();
 	const rotZ = (Math.PI / 180) * perspective.getRotZ();
-    
+	
 	// Calculate intersection point
 	const hyp = -Math.tan(rotX) * camera.getPosition()[2];
 
@@ -474,7 +474,7 @@ function initListeners_Keyboard() {
 		const key = event.key.toLowerCase();
 		keyDowns.push(key);
 		if (keyHelds.indexOf(key) === -1) keyHelds.push(key);
-        
+		
 		if (event.key === 'Tab') event.preventDefault();
 	});
 
@@ -573,6 +573,10 @@ function removeMouseDown_Left() {
 
 function isMouseHeld_Left() {
 	return mouseHelds.includes(leftMouseKey);
+}
+
+function isMouseHeld_Right() {
+	return mouseHelds.includes(rightMouseKey);
 }
 
 function isKeyDown(keyName) {
@@ -685,6 +689,7 @@ export default {
 	getTouchClickedTile,
 	getTouchClickedWorld,
 	isMouseHeld_Left,
+	isMouseHeld_Right,
 	isKeyDown,
 	atleast1KeyHeld,
 	isKeyHeld,

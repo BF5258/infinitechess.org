@@ -27,6 +27,7 @@ import guigameinfo from '../gui/guigameinfo.js';
 import colorutil from '../../chess/util/colorutil.js';
 import jsutil from '../../util/jsutil.js';
 import config from '../config.js';
+import premove from './premove.js';
 import validatorama from '../../util/validatorama.js';
 // Import End
 
@@ -75,7 +76,7 @@ const afk = {
 	timeUntilAFKSecs_Abortable: 20, // 20 + 20 = 40 seconds
 	timeUntilAFKSecs_Untimed: 100, // 100 + 20 = 2 minutes
 	/** The amount of time we have, in milliseconds, from the time we alert the
-     * server we are afk, to the time we lose if we don't return. */
+	 * server we are afk, to the time we lose if we don't return. */
 	timerToLossFromAFK: 20000,
 	/** The ID of the timer to alert the server we are afk. */
 	timeoutID: undefined,
@@ -84,7 +85,7 @@ const afk = {
 	displayAFKTimeoutID: undefined,
 	/** The timeout ID of the timer to play the next violin staccato note */
 	playStaccatoTimeoutID: undefined,
-
+	
 	timeOpponentLoseFromAFK: undefined,
 	/** The timeout ID of the timer to display the next "Opponent is AFK..." message. */
 	displayOpponentAFKTimeoutID: undefined
@@ -103,7 +104,7 @@ const serverRestart = {
 	/** The minute intervals at which to display on screen the server is restarting. */
 	keyMinutes: [30, 20, 15, 10, 5, 2, 1, 0],
 	/** The timeout ID of the timer to display the next "Server restarting..." message.
-     * This can be used to cancel the timer when the server informs us it's already restarted. */
+	 * This can be used to cancel the timer when the server informs us it's already restarted. */
 	timeoutID: undefined
 };
 
@@ -131,7 +132,7 @@ function setInSyncFalse() { inSync = false; }
 
 function update() {
 	if (!inOnlineGame) return;
-
+	
 	updateAFK();
 }
 
@@ -148,8 +149,8 @@ function rescheduleAlertServerWeAFK() {
 	if (!isItOurTurn() || gamefileutility.isGameOver(gamefile) || isPrivate && clock.isGameUntimed(gamefile) || !clock.isGameUntimed(gamefile) && movesscript.isGameResignable(gamefile)) return;
 	// Games with less than 2 moves played more-quickly start the AFK auto resign timer
 	const timeUntilAFKSecs = !movesscript.isGameResignable(gamefile) ? afk.timeUntilAFKSecs_Abortable
-        : clock.isGameUntimed(gamefile) ? afk.timeUntilAFKSecs_Untimed
-            : afk.timeUntilAFKSecs;
+		: clock.isGameUntimed(gamefile) ? afk.timeUntilAFKSecs_Untimed
+			: afk.timeUntilAFKSecs;
 	afk.timeoutID = setTimeout(tellServerWeAFK, timeUntilAFKSecs * 1000);
 }
 
@@ -163,10 +164,10 @@ function cancelAFKTimer() {
 function tellServerWeAFK() {
 	websocket.sendmessage('game','AFK');
 	afk.timeWeLoseFromAFK = Date.now() + afk.timerToLossFromAFK;
-
+	
 	// Play lowtime alert sound
 	sound.playSound_lowtime();
-
+	
 	// Display on screen "You are AFK. Auto-resigning in 20..."
 	displayWeAFK(20);
 	// The first violin staccato note is played in 10 seconds
@@ -196,7 +197,7 @@ function playStaccatoNote(note, secsRemaining) {
 	if (note === 'c3') sound.playSound_viola_c3();
 	else if (note === 'c4') sound.playSound_violin_c4();
 	else return console.error("Invalid violin note");
-    
+	
 	const nextSecsRemaining = secsRemaining > 5 ? secsRemaining - 1 : secsRemaining - 0.5;
 	if (nextSecsRemaining === 0) return; // Stop
 	const nextNote = nextSecsRemaining === Math.floor(nextSecsRemaining) ? 'c3' : 'c4';
@@ -364,7 +365,7 @@ function handleJoinGame(message) {
 	//	   clockValues: { timerWhite, timerBlack, timeNextPlayerLosesAt }
 	//     id, clock, publicity, youAreColor, , moves, autoAFKResignTime, disconnect, gameConclusion, drawOffer,
 	// }
-
+	
 	// We were auto-unsubbed from the invites list, BUT we want to keep open the socket!!
 	const subs = websocket.getSubs();
 	subs.invites = false;
@@ -384,16 +385,21 @@ function handleJoinGame(message) {
 function handleOpponentsMove(message) { // { move, gameConclusion, moveNumber, timerWhite, timerBlack, timeNextPlayerLosesAt }
 	if (!inOnlineGame) return;
 	const moveAndConclusion = { move: message.move, gameConclusion: message.gameConclusion };
-    
+	
+	const gamefile = game.getGamefile();
+	
+	//Remove premoves from the board. They will be put back later.
+	movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
+	premove.hidePremoves(gamefile, {clearRewindInfo: true});
+	
 	// Make sure the move number matches the expected.
 	// Otherwise, we need to re-sync
-	const gamefile = game.getGamefile();
 	const expectedMoveNumber = gamefile.moves.length + 1;
 	if (message.moveNumber !== expectedMoveNumber) {
 		console.log(`We have desynced from the game. Resyncing... Expected opponent's move number: ${expectedMoveNumber}. Actual: ${message.moveNumber}. Opponent's whole move: ${JSON.stringify(moveAndConclusion)}`);
 		return resyncToGame();
 	}
-
+	
 	// Convert the move from compact short format "x,y>x,yN"
 	// to long format { startCoords, endCoords, promotion }
 	/** @type {Move} */
@@ -405,47 +411,49 @@ function handleOpponentsMove(message) { // { move, gameConclusion, moveNumber, t
 		const reason = 'Incorrectly formatted.';
 		return reportOpponentsMove(reason);
 	}
-
+	
 	// If not legal, this will be a string for why it is illegal.
 	const moveIsLegal = legalmoves.isOpponentsMoveLegal(gamefile, move, message.gameConclusion);
 	if (moveIsLegal !== true) console.log(`Buddy made an illegal play: ${JSON.stringify(moveAndConclusion)}`);
 	if (moveIsLegal !== true && !isPrivate) return reportOpponentsMove(moveIsLegal); // Allow illegal moves in private games
-
-	movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
-
+	
 	// Forward the move...
-
+	
 	const piecemoved = gamefileutility.getPieceAtCoords(gamefile, move.startCoords);
 	const legalMoves = legalmoves.calculate(gamefile, piecemoved);
 	const endCoordsToAppendSpecial = jsutil.deepCopyObject(move.endCoords);
 	legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, endCoordsToAppendSpecial); // Passes on any special moves flags to the endCoords
-
+	
 	move.type = piecemoved.type;
 	specialdetect.transferSpecialFlags_FromCoordsToMove(endCoordsToAppendSpecial, move);
 	movepiece.makeMove(gamefile, move);
-
+	
+	premove.submitPremove(gamefile); //Send our next premove to the server if there are any
+	premove.showPremoves(gamefile); //Put the premoves back
+	
 	selection.reselectPiece(); // Reselect the currently selected piece. Recalc its moves and recolor it if needed.
-
+	
 	// Edit the clocks
 	clock.edit(gamefile, message.clockValues);
 	guiclock.edit(gamefile);
-
+	
 	// For online games, we do NOT EVER conclude the game, so do that here if our opponents move concluded the game
 	if (gamefileutility.isGameOver(gamefile)) {
 		game.concludeGame();
 		requestRemovalFromPlayersInActiveGames();
 	}
-
+	
 	rescheduleAlertServerWeAFK();
 	stopOpponentAFKCountdown(); // The opponent is no longer AFK if they were
 	flashTabNameYOUR_MOVE(true);
 	scheduleMoveSound_timeoutID();
+	
 	guipause.onReceiveOpponentsMove(); // Update the pause screen buttons
 }
 
 function flashTabNameYOUR_MOVE(on) {
 	if (!loadbalancer.isPageHidden()) return document.title = tabNameFlash.originalDocumentTitle;
-
+	
 	document.title = on ? "YOUR MOVE" : tabNameFlash.originalDocumentTitle;
 	tabNameFlash.timeoutID = setTimeout(flashTabNameYOUR_MOVE, 1500, !on);
 }
@@ -484,38 +492,38 @@ function handleServerGameUpdate(messageContents) { // { gameConclusion, clockVal
 	if (!inOnlineGame) return;
 	const gamefile = game.getGamefile();
 	const claimedGameConclusion = messageContents.gameConclusion;
-
+	
 	/**
-     * Make sure we are in sync with the final move list.
-     * We need to do this because sometimes the game can end before the
-     * server sees our move, but on our screen we have still played it.
-     */
+	 * Make sure we are in sync with the final move list.
+	 * We need to do this because sometimes the game can end before the
+	 * server sees our move, but on our screen we have still played it.
+	 */
 	if (!synchronizeMovesList(gamefile, messageContents.moves, claimedGameConclusion)) { // Cheating detected. Already reported, don't 
 		stopOpponentAFKCountdown(); 
 		return;
 	}
 	guigameinfo.updateWhosTurn(gamefile);
-
+	
 	// If Opponent is currently afk, display that countdown
 	if (messageContents.autoAFKResignTime && !isItOurTurn()) startOpponentAFKCountdown(messageContents.autoAFKResignTime);
 	else stopOpponentAFKCountdown();
-
+	
 	// If opponent is currently disconnected, display that countdown
 	if (messageContents.disconnect) startOpponentDisconnectCountdown(messageContents.disconnect); // { autoDisconnectResignTime, wasByChoice }
 	else stopOpponentDisconnectCountdown();
-
+	
 	// If the server is restarting, start displaying that info.
 	if (messageContents.serverRestartingAt) initServerRestart(messageContents.serverRestartingAt);
 	else resetServerRestarting();
-
+	
 	drawoffers.set(messageContents.drawOffer);
-
+	
 	// Must be set before editing the clocks.
 	gamefile.gameConclusion = claimedGameConclusion;
-
+	
 	// When the game has ended by time/disconnect/resignation/aborted
 	clock.edit(gamefile, messageContents.clockValues);
-
+	
 	if (gamefileutility.isGameOver(gamefile)) {
 		game.concludeGame();
 		requestRemovalFromPlayersInActiveGames();
@@ -532,7 +540,13 @@ function handleServerGameUpdate(messageContents) { // { gameConclusion, clockVal
  * @returns {boolean} *false* if it detected an illegal move played by our opponent.
  */
 function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
-
+	
+	const originalMoveIndex = gamefile.moveIndex;
+	const originalPremovesVisible = gamefile.premovesVisible;
+	//Remove premoves from the board so other code doesn't get confused.
+	//They will be put back later.
+	if(gamefile.premovesVisible) premove.hidePremoves(gamefile);
+	
 	// Early exit case. If we have played exactly 1 more move than the server,
 	// and the rest of the moves list matches, don't modify our moves,
 	// just re-submit our move!
@@ -543,17 +557,15 @@ function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
 		console.log("Sending our move again after resyncing..");
 		return sendMove();
 	}
-
-	const originalMoveIndex = gamefile.moveIndex;
-	movepiece.forwardToFront(gamefile, { flipTurn: false, animateLastMove: false, updateProperties: false });
+	
 	let aChangeWasMade = false;
-
+	
 	while (gamefile.moves.length > moves.length) { // While we have more moves than what the server does..
 		movepiece.rewindMove(gamefile, { animate: false });
 		console.log("Rewound one move while resyncing to online game.");
 		aChangeWasMade = true;
 	}
-
+	
 	let i = moves.length - 1;
 	while (true) { // Decrement i until we find the latest move at which we're in sync, agreeing with the server about.
 		if (i === -1) break; // Beginning of game
@@ -567,19 +579,19 @@ function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
 		}
 		i--;
 	}
-
+	
 	// i is now the index of the latest move that MATCHES in both ours and the server's moves lists.
-
+	
 	const opponentColor = getOpponentColor(ourColor);
 	while (i < moves.length - 1) { // Increment i, adding the server's correct moves to our moves list
 		i++;
 		const thisShortmove = moves[i]; // '1,2>3,4Q'  The shortmove from the server's move list to add
 		const move = movepiece.calculateMoveFromShortmove(gamefile, thisShortmove);
-
+		
 		const colorThatPlayedThisMove = movesscript.getColorThatPlayedMoveIndex(gamefile, i);
 		const opponentPlayedThisMove = colorThatPlayedThisMove === opponentColor;
-
-
+		
+		
 		if (opponentPlayedThisMove) { // Perform legality checks
 			// If not legal, this will be a string for why it is illegal.
 			const moveIsLegal = legalmoves.isOpponentsMoveLegal(gamefile, move, claimedGameConclusion);
@@ -588,34 +600,39 @@ function synchronizeMovesList(gamefile, moves, claimedGameConclusion) {
 				reportOpponentsMove(moveIsLegal);
 				return false;
 			}
-
+			
 			rescheduleAlertServerWeAFK();
 			stopOpponentAFKCountdown(); // The opponent is no longer AFK if they were
 			flashTabNameYOUR_MOVE();
 			scheduleMoveSound_timeoutID();
 		} else cancelFlashTabTimer();
-        
+		
 		const isLastMove = i === moves.length - 1;
 		movepiece.makeMove(gamefile, move, { doGameOverChecks: isLastMove, concludeGameIfOver: false, animate: isLastMove });
 		console.log("Forwarded one move while resyncing to online game.");
 		aChangeWasMade = true;
 	}
-
-	if (!aChangeWasMade) movepiece.rewindGameToIndex(gamefile, originalMoveIndex, { removeMove: false });
-	else selection.reselectPiece(); // Reselect the selected piece from before we resynced. Recalc its moves and recolor it if needed.
-
+	
+	if (aChangeWasMade) {
+		premove.clearPremoves(gamefile); //If the game is different to what the player thought it was, they might want to make a different move. 
+		selection.reselectPiece(); // Reselect the selected piece from before we resynced. Recalc its moves and recolor it if needed.
+	} else {
+		if(originalPremovesVisible) premove.showPremoves(gamefile);
+		movepiece.rewindGameToIndex(gamefile, originalMoveIndex, { removeMove: false });
+	}
+	
 	return true; // No cheating detected
 }
 
 function reportOpponentsMove(reason) {
 	// Send the move number of the opponents move so that there's no mixup of which move we claim is illegal.
 	const opponentsMoveNumber = game.getGamefile().moves.length + 1;
-
+	
 	const message = {
 		reason,
 		opponentsMoveNumber
 	};
-
+	
 	websocket.sendmessage('game', 'report', message);
 }
 
@@ -646,7 +663,7 @@ function initOnlineGame(gameOptions) {
 		scheduleMoveSound_timeoutID();
 	}
 	if (gameOptions.serverRestartingAt) initServerRestart(gameOptions.serverRestartingAt);
-    
+	
 	// These make sure it will place us in black's perspective
 	perspective.resetRotations();
 }
@@ -693,23 +710,23 @@ function areWeColor(color) { return color === ourColor; }
 function sendMove() {
 	if (!inOnlineGame || !inSync) return; // Don't do anything if it's a local game
 	if (config.DEV_BUILD) console.log("Sending our move..");
-
+	
 	const gamefile = game.getGamefile();
-
+	
 	const shortmove = movesscript.getLastMove(gamefile.moves).compact; // "x,y>x,yN"
-
+	
 	const data = {
 		move: shortmove,
 		moveNumber: gamefile.moves.length,
 		gameConclusion: gamefile.gameConclusion,
 	};
-
+	
 	websocket.sendmessage('game', 'submitmove', data, true);
-
+	
 	// Declines any open draw offer from our opponent. We don't need to inform
 	// the server because the server auto declines when we submit our move.
 	drawoffers.callback_declineDraw({ informServer: false });
-    
+	
 	rescheduleAlertServerWeAFK();
 }
 
@@ -724,7 +741,7 @@ function onMainMenuPress() {
 		}
 		return;
 	}
-
+	
 	if (movesscript.isGameResignable(gamefile)) resign();
 	else abort();
 }
@@ -755,7 +772,7 @@ async function askServerIfWeAreInGame() {
 	// when we try to create our websocket!
 	// The server only allows sockets if we are either logged in, or have a browser-id cookie.
 	await validatorama.waitUntilInitialRequestBack();
-
+	
 	const messageContents = undefined;
 	websocket.sendmessage('game', 'joingame', messageContents, true);
 }

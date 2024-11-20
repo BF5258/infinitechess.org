@@ -147,6 +147,10 @@ function getDefaultCheckHighlightColor() {
 	return themes.getPropertyOfTheme(theme, 'checkHighlightColor'); 
 }
 
+function getDefaultPremoveHighlightColor() {
+	return themes.getPropertyOfTheme(theme, 'premoveHighlightColor');
+}
+
 function setTheme(newTheme) {
 	if (!themes.isThemeValid(newTheme)) {
 		console.error(`Invalid theme "${newTheme}"! Setting to default..`);
@@ -312,6 +316,7 @@ export default {
 	getLegalMoveHighlightColor,
 	getDefaultLastMoveHighlightColor,
 	getDefaultCheckHighlightColor,
+	getDefaultPremoveHighlightColor,
 	getPieceRegenColorArgs,
 	getColorOfType,
 	getEM,

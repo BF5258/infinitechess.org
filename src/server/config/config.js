@@ -29,6 +29,11 @@ if (!DEV_BUILD && simulatedWebsocketLatencyMillis !== 0) throw new Error("simula
 /** The domain name of the production website. */
 const HOST_NAME = 'www.infinitechess.org';
 
+/** Whether players are auto resigned.
+ * Useful for testing if you don't want to be kicked every 20 seconds.
+ */
+const AUTO_AFK_RESIGN = false || !DEV_BUILD;
+
 /**
  * The latest version of the game.
  * If the client is ever using an old version, we will tell them to hard-refresh.

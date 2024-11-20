@@ -7,6 +7,7 @@ import camera from '../rendering/camera.js';
 import game from '../chess/game.js';
 import math from '../../util/math.js';
 import config from '../config.js';
+import premove from '../misc/premove.js'
 // Import End
 
 "use strict";
@@ -53,11 +54,16 @@ function hideMoves() {
 }
 
 function setTextContentOfMoves() {
-
-	const currentPly = game.getGamefile().moveIndex + 1;
-	const totalPlyCount = movesscript.getPlyCount(game.getGamefile().moves);
-
-	elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
+	const gamefile = game.getGamefile()
+	if(premove.isPremove(gamefile)) {
+		const currentPremove = premove.getPremoveCountAtIndex(gamefile);
+		const totalPremoveCount = gamefile.premoves.length;
+		elementStatusMoves.textContent = `${translations.premove_counter} ${currentPremove}/${totalPremoveCount}`;
+	} else {
+		const currentPly = gamefile.moveIndex + 1;
+		const totalPlyCount = premove.getPlyCountExcludingPremoves(gamefile);
+		elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
+	}
 }
 
 function updateStatsCSS() {

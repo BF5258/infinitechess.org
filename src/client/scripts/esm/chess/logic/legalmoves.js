@@ -58,7 +58,7 @@ function genVicinity(gamefile) {
 		// For each individual move...
 		for (let a = 0; a < thisPieceIndividualMoveset.length; a++) {
 			const thisIndividualMove = thisPieceIndividualMoveset[a];
-            
+			
 			// Convert the move into a key
 			const key = coordutil.getKeyFromCoords(thisIndividualMove);
 
@@ -87,19 +87,21 @@ function getPieceMoveset(gamefile, pieceType) {
 	return movesetFunc(); // Calling these parameters as a function returns their moveset.
 }
 
-/**
- * Calculates the legal moves of the provided piece in the provided gamefile.
- * @param {gamefile} gamefile - The gamefile
- * @param {Piece} piece - The piece: `{ type, coords, index }`
- * @param {Object} options - An object that may contain the `onlyCalcSpecials` option, that when *true*, will only calculate the legal special moves of the piece. Default: *false*
- * @returns {LegalMoves} The legalmoves object with the properties `individual`, `horizontal`, `vertical`, `diagonalUp`, `diagonalDown`.
- */
-function calculate(gamefile, piece, { onlyCalcSpecials = false } = {}) { // piece: { type, coords }
-	if (piece.index === undefined) throw new Error("To calculate a piece's legal moves, we must have the index property.");
-	const coords = piece.coords;
-	const type = piece.type;
-	const trimmedType = colorutil.trimColorExtensionFromType(type);
-	const color = colorutil.getPieceColorFromType(type); // Color of piece calculating legal moves of
+	/**
+	 * Calculates the legal moves of the provided piece in the provided gamefile.
+	 * @param {gamefile} gamefile - The gamefile
+	 * @param {Piece} piece - The piece: `{ type, coords, index }`
+	 * @param {Object} options - An object that may contain options.
+	 * - `onlyCalcSpecials`: When *true*, will only calculate the legal special moves of the piece. Default: *false*
+	 * - `isPremove`: Allows pieces to move through and into others. Used when premoving.
+	 * @returns {LegalMoves} The legalmoves object with the properties `individual`, `horizontal`, `vertical`, `diagonalUp`, `diagonalDown`.
+	 */
+	function calculate(gamefile, piece, { onlyCalcSpecials = false, isPremove = false } = {}) { // piece: { type, coords }
+		if (piece.index === undefined) throw new Error("To calculate a piece's legal moves, we must have the index property.");
+		const coords = piece.coords;
+		const type = piece.type;
+		const trimmedType = colorutil.trimColorExtensionFromType(type);
+		const color = colorutil.getPieceColorFromType(type); // Color of piece calculating legal moves of
 
 	// if (color !== gamefile.whosTurn && !options.getEM()) return { individual: [] } // No legal moves if its not their turn!!
 
@@ -113,8 +115,10 @@ function calculate(gamefile, piece, { onlyCalcSpecials = false } = {}) { // piec
 		// Legal jumping/individual moves
 
 		shiftIndividualMovesetByCoords(thisPieceMoveset.individual, coords);
-		legalIndividualMoves = moves_RemoveOccupiedByFriendlyPieceOrVoid(gamefile, thisPieceMoveset.individual, color);
-        
+		legalIndividualMoves = isPremove?
+			thisPieceMoveset.individual :
+			moves_RemoveOccupiedByFriendlyPieceOrVoid(gamefile, thisPieceMoveset.individual, color);
+		
 		// Legal sliding moves
 		if (thisPieceMoveset.sliding) {
 			const lines = gamefile.startSnapshot.slidingPossible;
@@ -122,21 +126,23 @@ function calculate(gamefile, piece, { onlyCalcSpecials = false } = {}) { // piec
 				const line = lines[i];
 				if (!thisPieceMoveset.sliding[line]) continue;
 				const key = organizedlines.getKeyFromLine(line,coords);
-				legalSliding[line] = slide_CalcLegalLimit(gamefile.piecesOrganizedByLines[line][key],line, thisPieceMoveset.sliding[line], coords, color);
+				legalSliding[line] = isPremove?
+					[-Infinity, Infinity] :
+					slide_CalcLegalLimit(gamefile.piecesOrganizedByLines[line][key],line, thisPieceMoveset.sliding[line], coords, color);
 			};
 		};
 
 	}
-    
+	
 	// Add any special moves!
-	if (gamefile.specialDetects[trimmedType]) gamefile.specialDetects[trimmedType](gamefile, coords, color, legalIndividualMoves);
+	if (gamefile.specialDetects[trimmedType]) gamefile.specialDetects[trimmedType](gamefile, coords, color, legalIndividualMoves, isPremove);
 
 	const moves = {
 		individual: legalIndividualMoves,
 		sliding: legalSliding
 	};
-    
-	checkdetection.removeMovesThatPutYouInCheck(gamefile, moves, piece, color);
+	
+	if(!isPremove) checkdetection.removeMovesThatPutYouInCheck(gamefile, moves, piece, color);
 
 	return moves;
 }
@@ -171,7 +177,7 @@ function moves_RemoveOccupiedByFriendlyPieceOrVoid(gamefile, individualMoves, co
 		// If they match colors, move is illegal because we cannot capture friendly pieces. Remove the move.
 		// ALSO remove if it's a void!
 		if (color === pieceAtSquareColor
-            || pieceAtSquare === 'voidsN') individualMoves.splice(i, 1);
+			|| pieceAtSquare === 'voidsN') individualMoves.splice(i, 1);
 	}
 
 	return individualMoves;
@@ -392,7 +398,7 @@ function doesSlidingMovesetContainSquare(slideMoveset, direction, pieceCoords, c
  * @returns {boolean} 
  */
 function hasAtleast1Move(moves) { // { individual, horizontal, vertical, ... }
-    
+	
 	if (moves.individual.length > 0) return true;
 	for (const line in moves.sliding)
 		if (doesSlideHaveWidth(moves.sliding[line])) return true;

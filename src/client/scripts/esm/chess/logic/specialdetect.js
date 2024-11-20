@@ -54,34 +54,43 @@ function getSpecialMoves() {
  * @param {number[]} coords - Coordinates of the king selected
  * @param {string} color - The color of the king selected
  * @param {array[]} individualMoves - The legal individual moves calculated so far
+ * @param {boolean} [isPremove=false] - Ignore obstructions for premoves
  */
-function kings(gamefile, coords, color, individualMoves) {
+function kings(gamefile, coords, color, individualMoves, isPremove=false) {
 	if (!doesPieceHaveSpecialRight(gamefile, coords)) return; // King doesn't have castling rights
-
+	
 	const x = coords[0];
 	const y = coords[1];
 	const key = organizedlines.getKeyFromLine([1,0],coords);
 	const row = gamefile.piecesOrganizedByLines['1,0'][key];
-
-
+	
+	
 	// Castling. What makes a castle legal?
-
+	
 	let leftLegal = true;
 	let rightLegal = true;
-
+	
 	// 1. There is a piece directly left or right of us that has
 	// it's special move rights, that is atleast 3 squares away.
-
+	
 	let left = -Infinity; // Piece directly left of king. (Infinity if none)
 	let right = Infinity; // Piece directly right of king. (Infinity if none)
 	for (let i = 0; i < row.length; i++) {
 		const thisPiece = row[i]; // { type, coords }
 		const thisCoord = thisPiece.coords;
-
+		
+		if(isPremove && 
+			(
+			!doesPieceHaveSpecialRight(gamefile, thisCoord) ||
+			colorutil.getPieceColorFromType(thisPiece.type) !== color ||
+			thisPiece.type.startsWith('pawns')
+			)
+		) continue; //Ignore obstructions when making premoves
+		
 		if (thisCoord[0] < x && thisCoord[0] > left) left = thisCoord[0];
 		else if (thisCoord[0] > x && thisCoord[0] < right) right = thisCoord[0];
 	}
-
+	
 	const leftDist = x - left;
 	const rightDist = right - x;
 	const leftCoord = [left, y];
@@ -90,21 +99,21 @@ function kings(gamefile, coords, color, individualMoves) {
 	const rightPieceType = gamefileutility.getPieceTypeAtCoords(gamefile, rightCoord);
 	const leftColor = leftPieceType ? colorutil.getPieceColorFromType(leftPieceType) : undefined;
 	const rightColor = rightPieceType ? colorutil.getPieceColorFromType(rightPieceType) : undefined;
-
+	
 	if (left === -Infinity || leftDist < 3 || !doesPieceHaveSpecialRight(gamefile, leftCoord) || leftColor !== color || leftPieceType.startsWith('pawns')) leftLegal = false;
 	if (right === Infinity || rightDist < 3 || !doesPieceHaveSpecialRight(gamefile, rightCoord) || rightColor !== color || rightPieceType.startsWith('pawns')) rightLegal = false;
 	if (!leftLegal && !rightLegal) return;
-
+	
 	// 2. IF USING CHECKMATE: The king must not currently be in check,
 	// AND The square the king passes through must not be a check.
 	// The square the king lands on will be tested later, within  legalmoves.calculate()
-
+	
 	const oppositeColor = colorutil.getOppositeColor(color);
-	if (gamerules.doesColorHaveWinCondition(gamefile.gameRules, oppositeColor, 'checkmate')) {
+	if (gamerules.doesColorHaveWinCondition(gamefile, oppositeColor, 'checkmate') && !isPremove) {
 		if (gamefile.inCheck) return; // Not legal if in check
-
+		
 		// Simulate the space in-between
-
+		
 		const king = gamefileutility.getPieceAtCoords(gamefile, coords); // { type, index, coords }
 		if (leftLegal) {
 			const middleSquare = [x - 1, y];
@@ -114,18 +123,18 @@ function kings(gamefile, coords, color, individualMoves) {
 			if (checkdetection.doesMovePutInCheck(gamefile, king, middleSquare, color)) rightLegal = false;
 		}
 	}
-
+	
 	// Add move
-
+	
 	if (leftLegal) {
 		const specialMove = [coords[0] - 2, coords[1]];
-		specialMove.castle = { dir: -1, coord: leftCoord};
+		specialMove.castle = { dir: -1, coords: leftCoord};
 		individualMoves.push(specialMove);
 	}
-
+	
 	if (rightLegal) {
 		const specialMove = [coords[0] + 2, coords[1]];
-		specialMove.castle = { dir: 1, coord: rightCoord};
+		specialMove.castle = { dir: 1, coords: rightCoord};
 		individualMoves.push(specialMove);
 	}
 }
@@ -138,50 +147,62 @@ function kings(gamefile, coords, color, individualMoves) {
  * @param {number[]} coords - Coordinates of the pawn selected
  * @param {string} color - The color of the pawn selected
  * @param {array[]} individualMoves - The legal individual moves calculated so far
+ * @param {boolean} [isPremove=false] - Ignore obstructions for premoves
  */
-function pawns(gamefile, coords, color, individualMoves) {
-
+function pawns(gamefile, coords, color, individualMoves, isPremove=false) {
+	/**
+	 * When premoving allways show captures and single push.
+	 * Double push is only shown if the pawn has special rights.
+	*/      
+	
 	// White and black pawns move and capture in opposite directions.
 	const yOneorNegOne = color === 'white' ? 1 : -1; 
-
+	
 	// How do we go about calculating a pawn's legal moves?
-
+	
 	// 1. It can move forward if there is no piece there
-
+	
 	// Is there a piece in front of it?
 	const coordsInFront = [coords[0], coords[1] + yOneorNegOne];
-	if (!gamefileutility.getPieceTypeAtCoords(gamefile, coordsInFront)) {
+	if (!gamefileutility.getPieceTypeAtCoords(gamefile, coordsInFront) || isPremove) {
 		individualMoves.push(coordsInFront); // No piece, add the move
-
+		
 		// Is the double push legal?
 		const doublePushCoord = [coordsInFront[0], coordsInFront[1] + yOneorNegOne];
-		const pieceAtCoords = gamefileutility.getPieceTypeAtCoords(gamefile, doublePushCoord);
+		const pieceAtCoords = isPremove? undefined:gamefileutility.getPieceTypeAtCoords(gamefile, doublePushCoord);
 		if (!pieceAtCoords && doesPieceHaveSpecialRight(gamefile, coords)) individualMoves.push(doublePushCoord); // Add the double push!
 	}
-
+	
 	// 2. It can capture diagonally if there are opponent pieces there
-
+	
 	const coordsToCapture = [
-        [coords[0] - 1, coords[1] + yOneorNegOne],
-        [coords[0] + 1, coords[1] + yOneorNegOne]
-    ];
+		[coords[0] - 1, coords[1] + yOneorNegOne],
+		[coords[0] + 1, coords[1] + yOneorNegOne]
+	];
+	
+	//Allways show diagonal premoves.
+	if(isPremove) {
+		individualMoves.push(...coordsToCapture);
+		return;
+	}
+	
 	for (let i = 0; i < 2; i++) {
 		const thisCoordsToCapture = coordsToCapture[i];
-
+		
 		// Is there an enemy piece at this coords?
 		const pieceAtCoords = gamefileutility.getPieceTypeAtCoords(gamefile, thisCoordsToCapture);
 		if (!pieceAtCoords) continue; // No piece, skip
-
+		
 		// There is a piece. Make sure it's a different color
 		const colorOfPiece = colorutil.getPieceColorFromType(pieceAtCoords);
 		if (color === colorOfPiece) continue; // Same color, don't add the capture
-
+		
 		// Make sure it isn't a void
 		if (pieceAtCoords === 'voidsN') continue;
-
+		
 		individualMoves.push(thisCoordsToCapture); // Good to add the capture!
 	}
-
+	
 	// 3. It can capture en passant if a pawn next to it just pushed twice.
 	addPossibleEnPassant(gamefile, individualMoves, coords, color);
 }
@@ -196,26 +217,26 @@ function pawns(gamefile, coords, color, individualMoves) {
 // If it can capture en passant, the move is appended to  legalmoves
 function addPossibleEnPassant(gamefile, individualMoves, coords, color) {
 	if (!gamefile.enpassant) return; // No enpassant flag on the game, no enpassant possible
-
+	
 	const xLandDiff = gamefile.enpassant[0] - coords[0];
 	const oneOrNegOne = color === 'white' ? 1 : -1;
 	if (Math.abs(xLandDiff) !== 1) return; // Not immediately left or right of us
 	if (coords[1] + oneOrNegOne !== gamefile.enpassant[1]) return; // Not one in front of us
-
+	
 	const captureSquare = [coords[0] + xLandDiff, coords[1] + oneOrNegOne];
-
+	
 	const capturedPieceSquare = [coords[0] + xLandDiff, coords[1]];
 	const capturedPieceType = gamefileutility.getPieceTypeAtCoords(gamefile, capturedPieceSquare);
 	// cannot capture nothing en passant
 	if (!capturedPieceType) return;
 	// cannot capture own piece en passant
 	if (color === colorutil.getPieceColorFromType(capturedPieceType)) return;
-
+	
 	// It is capturable en passant!
-
+	
 	// Extra check to make sure there's no piece (bug if so)
 	if (gamefileutility.getPieceTypeAtCoords(gamefile, captureSquare)) return console.error("We cannot capture onpassant onto a square with an existing piece! " + captureSquare);
-
+	
 	// TAG THIS MOVE as an en passant capture!! gamefile looks for this tag
 	// on the individual move to detect en passant captures and to know what piece to delete
 	captureSquare.enpassant = -oneOrNegOne;
@@ -228,8 +249,9 @@ function addPossibleEnPassant(gamefile, individualMoves, coords, color) {
  * @param {number[]} coords - Coordinates of the rose selected
  * @param {string} color - The color of the rose selected
  * @param {array[]} individualMoves - The legal individual moves calculated so far
+ * @param {boolean} [isPremove=false] - Ignore obstructions for premoves
  */
-function roses(gamefile, coords, color, individualMoves) {
+function roses(gamefile, coords, color, individualMoves, isPremove=false) {
 	const movements = [[-2, -1], [-1, -2], [1, -2], [2, -1], [2, 1], [1, 2], [-1, 2], [-2, 1]]; // Counter-clockwise
 	const directions = [1, -1]; // Counter-clockwise and clockwise directions
 
@@ -240,12 +262,14 @@ function roses(gamefile, coords, color, individualMoves) {
 			for (let c = 0; c < movements.length - 1; c++) { // Iterate 7 times, since we can't land on the square we started
 				const movement = movements[math.posMod(b, movements.length)];
 				currentCoord = coordutil.addCoordinates(currentCoord, movement);
-				const pieceOnSquare = gamefileutility.getPieceAtCoords(gamefile, currentCoord); // { type, index, coords }
-				if (pieceOnSquare) {
-					const colorOfPiece = colorutil.getPieceColorFromType(pieceOnSquare.type);
-					// eslint-disable-next-line max-depth
-					if (color !== colorOfPiece) appendCoordToIndividuals(individualMoves, currentCoord); // Capture is legal
-					break;
+				if(!isPremove) { //Ignore obstructions when premoving
+					const pieceOnSquare = gamefileutility.getPieceAtCoords(gamefile, currentCoord); // { type, index, coords }
+					if (pieceOnSquare) {
+						const colorOfPiece = colorutil.getPieceColorFromType(pieceOnSquare.type);
+						// eslint-disable-next-line max-depth
+						if (color !== colorOfPiece) appendCoordToIndividuals(individualMoves, currentCoord); // Capture is legal
+						break;
+					}
 				}
 				// There is not a piece
 				appendCoordToIndividuals(individualMoves, currentCoord);
@@ -290,14 +314,14 @@ function doesPieceHaveSpecialRight(gamefile, coords) {
 function isPawnPromotion(gamefile, type, coordsClicked) {
 	if (!type.startsWith('pawns')) return false;
 	if (!gamefile.gameRules.promotionRanks) return false; // This game doesn't have promotion.
-
+	
 	const color = colorutil.getPieceColorFromType(type);
 	const promotionRank = color === 'white' ? gamefile.gameRules.promotionRanks[0]
-        : color === 'black' ? gamefile.gameRules.promotionRanks[1]
-            : undefined; // Can neutral pawns promote???
-
+		: color === 'black' ? gamefile.gameRules.promotionRanks[1]
+			: undefined; // Can neutral pawns promote???
+	
 	if (coordsClicked[1] === promotionRank) return true;
-
+	
 	return false;
 }
 
