@@ -82,17 +82,10 @@ function animatePiece(type, startCoords, endCoords, captured, resetAnimations = 
 
 function dragPiece(type, startCoords, endCoords) {
 	pieceDragged = { type, startCoords, endCoords };
-	frametracker.onVisualChange();
 }
 
 function dropPiece() {
 	pieceDragged = null;
-	frametracker.onVisualChange();
-}
-
-function hideHeldPiece() {
-	if (pieceDragged) pieceDragged.endCoords = null;
-	frametracker.onVisualChange();
 }
 
 /**
@@ -260,8 +253,8 @@ function genPieceModel() {
 		appendDataOfPiece3D(data, thisAnimation.type, newCoords);
 	}
 	
-	if (pieceDragged && pieceDragged.endCoords) {
-		appendDataOfPiece3D(data, pieceDragged.type, pieceDragged.endCoords, 1);
+	if (pieceDragged) {
+		appendDataOfPiece3D(data, pieceDragged.type, pieceDragged.endCoords,1);
 	}
 
 	// return buffermodel.createModel_ColorTexture3D(new Float32Array(data))
@@ -293,7 +286,6 @@ export default {
 	animatePiece,
 	dragPiece,
 	dropPiece,
-	hideHeldPiece,
 	update,
 	renderTransparentSquares,
 	renderPieces,
