@@ -545,6 +545,5 @@ export default {
 	randomizePanVelDir,
 	dragBoard,
 	eraseMomentum,
-	hasMomentum,
 	setPositionToArea
 };
