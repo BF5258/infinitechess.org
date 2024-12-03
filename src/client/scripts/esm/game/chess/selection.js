@@ -24,7 +24,6 @@ import colorutil from '../../chess/util/colorutil.js';
 import coordutil from '../../chess/util/coordutil.js';
 import frametracker from '../rendering/frametracker.js';
 import config from '../config.js';
-import animation from '../rendering/animation.js';
 // Import End
 
 /**
@@ -43,11 +42,6 @@ import animation from '../rendering/animation.js';
 
 /** The currently selected piece, if there is one: `{ type, index, coords }` @type {Piece} */
 let pieceSelected;
-/** If true `pieceSelected` is currently being held. */
-let draggingPiece = false;
-/** //True if the piece wasn't selected before we started dragging it. @type{boolean} */
-let didDragSelectPiece; 
-let dragEnabled = true;
 /** The pre-calculated legal moves of the current selected piece.
  * @type {LegalMoves} */
 let legalMoves;
@@ -75,8 +69,6 @@ let promoteTo;
  * @returns {Piece | undefined} The selected piece, if there is one: `{ type, index, coords }`, otherwise undefined.
  */
 function getPieceSelected() { return pieceSelected; }
-
-function areDraggingPiece() { return draggingPiece; }
 
 /**
  * Returns *true* if a piece is currently selected.
@@ -139,40 +131,14 @@ function update() {
             : board.gtile_MouseOver_Int();
 	if (!hoverSquare) return; // Undefined, this means we're in perspective and we shouldn't be listening to tile mouse over
 	updateHoverSquareLegal();
-	
-	const pieceClickedType = gamefileutility.getPieceTypeAtCoords(gamefile, hoverSquare);
-	
-	if(draggingPiece) {
-		if(input.isMouseHeld_Left()) { //still dragging.
-			animation.dragPiece(pieceSelected.type, pieceSelected.coords, board.gtile_MouseOver_Float());
-		} else {
-			animation.dropPiece();
-			handleMovingSelectedPiece(hoverSquare, pieceClickedType);
-			draggingPiece = false;
-		}
-	} else {
-		if (!input.isMouseDown_Left()) return; // Exit, we did not click
-		
-		if (pieceSelected) {
-			handleMovingSelectedPiece(hoverSquare, pieceClickedType);
-		} else {
-			didDragSelectPiece = !pieceSelected;
-			if (pieceClickedType) handleSelectingPiece(pieceClickedType);
-		}
-	}
-	
-	//if (!input.getMouseClicked() && !input.getTouchClicked()) return; // Exit, we did not click
-	//
-	//const pieceClickedType = gamefileutility.getPieceTypeAtCoords(gamefile, hoverSquare);
-	//
-	//if (pieceSelected) handleMovingSelectedPiece(hoverSquare, pieceClickedType); // A piece is already selected. Test if it was moved.
-	//else if (pieceClickedType) handleSelectingPiece(pieceClickedType);
-	//// Else we clicked, but there was no piece to select, *shrugs*
-}
 
-/** Picks up the currently selected piece if we are allowed to. */
-function startDragging() {
-	draggingPiece = dragEnabled && !isOpponentPiece && (!isPremove /*|| premovesEnabled*/) && !movement.hasMomentum();
+	if (!input.getMouseClicked() && !input.getTouchClicked()) return; // Exit, we did not click
+
+	const pieceClickedType = gamefileutility.getPieceTypeAtCoords(gamefile, hoverSquare);
+
+	if (pieceSelected) handleMovingSelectedPiece(hoverSquare, pieceClickedType); // A piece is already selected. Test if it was moved.
+	else if (pieceClickedType) handleSelectingPiece(pieceClickedType);
+	// Else we clicked, but there was no piece to select, *shrugs*
 }
 
 /**
@@ -192,17 +158,12 @@ function handleMovingSelectedPiece(coordsClicked, pieceClickedType) {
 		// const clickedPieceColor = colorutil.getPieceColorFromType(pieceClickedType);
 		// if (selectedPieceColor !== clickedPieceColor) break tag; // Did not click a friendly
 
-		if (hoverSquareLegal) break tag; // This piece is capturable, don't select it instead
-		
-		// If it clicked iteself, deselect or pick it up again.
+		// If it clicked iteself, deselect.
 		if (coordutil.areCoordsEqual(pieceSelected.coords, coordsClicked)) {
-			if(draggingPiece) {
-				if(!didDragSelectPiece) unselectPiece();
-			} else {
-				startDragging();
-				didDragSelectPiece = false;
-			}
-		} else if (pieceClickedType !== 'voidsN' && !draggingPiece) { // Select that other piece instead. Prevents us from selecting a void after selecting an obstacle.
+			unselectPiece();
+		} else if (hoverSquareLegal) { // This piece is capturable, don't select it instead
+			break tag;
+		} else if (pieceClickedType !== 'voidsN') { // Select that other piece instead. Prevents us from selecting a void after selecting an obstacle.
 			handleSelectingPiece(pieceClickedType);
 		}
 		
@@ -279,7 +240,6 @@ function selectPiece(type, index, coords) {
 	legalMoves = legalmoves.calculate(game.getGamefile(), pieceSelected, {isPremove: isPremove && premove.arePremovesAllowed()});
 	
 	highlights.regenModel(); // Generate the buffer model for the blue legal move fields.
-	startDragging();
 }
 
 /**
@@ -391,7 +351,7 @@ function updateHoverSquareLegal() {
 
 /** Renders the translucent piece underneath your mouse when hovering over the blue legal move fields. */
 function renderGhostPiece() {
-	if (!isAPieceSelected() || !hoverSquare || !hoverSquareLegal || draggingPiece || !input.isMouseSupported() || config.VIDEO_MODE) return;
+	if (!isAPieceSelected() || !hoverSquare || !hoverSquareLegal || !input.isMouseSupported() || config.VIDEO_MODE) return;
 	pieces.renderGhostPiece(pieceSelected.type, hoverSquare);
 }
 
@@ -406,6 +366,5 @@ export default {
 	update,
 	renderGhostPiece,
 	isOpponentPieceSelected,
-	arePremoving,
-	areDraggingPiece
+	arePremoving
 };

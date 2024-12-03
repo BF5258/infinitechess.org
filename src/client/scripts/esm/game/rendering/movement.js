@@ -11,7 +11,6 @@ import guititle from '../gui/guititle.js';
 import frametracker from './frametracker.js';
 import game from '../chess/game.js';
 import coordutil from '../../chess/util/coordutil.js';
-import docutil from '../../util/docutil.js';
 // Import End
 
 "use strict";
@@ -246,7 +245,7 @@ function removeOldPositions(time) {
 // Checks if the mouse or finger has started dragging the board. Keep in mind if the
 // user clicked a piece, then the click event has been removed, so you can't do both at once.
 function checkIfBoardDragged() {
-	if (perspective.getEnabled() || selection.areDraggingPiece()) return;
+	if (perspective.getEnabled()) return;
 
 	if (boardIsGrabbed === 0) { // Not already grabbed
 		if (input.isMouseDown_Left()) grabBoard_WithMouse();
