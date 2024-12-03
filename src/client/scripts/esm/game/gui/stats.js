@@ -1,6 +1,6 @@
 
 // Import Start
-import movesscript from './movesscript.js';
+import moveutil from '../../chess/util/moveutil.js';
 import style from './style.js';
 import options from '../rendering/options.js';
 import camera from '../rendering/camera.js';
@@ -54,16 +54,11 @@ function hideMoves() {
 }
 
 function setTextContentOfMoves() {
-	const gamefile = game.getGamefile()
-	if(premove.isPremove(gamefile)) {
-		const currentPremove = premove.getPremoveCountAtIndex(gamefile);
-		const totalPremoveCount = gamefile.premoves.length;
-		elementStatusMoves.textContent = `${translations.premove_counter} ${currentPremove}/${totalPremoveCount}`;
-	} else {
-		const currentPly = gamefile.moveIndex + 1;
-		const totalPlyCount = premove.getPlyCountExcludingPremoves(gamefile);
-		elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
-	}
+
+	const currentPly = game.getGamefile().moveIndex + 1;
+	const totalPlyCount = moveutil.getPlyCount(game.getGamefile().moves);
+
+	elementStatusMoves.textContent = `${translations.move_counter} ${currentPly}/${totalPlyCount}`;
 }
 
 function updateStatsCSS() {

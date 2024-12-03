@@ -53,11 +53,14 @@ const allowedOrigins = [ // Allowed sites
 
 // Session tokens expiry times ------------------------------------------------------
 
-const accessTokenExpiryMillis = 1000 * 60 * 15; // 15 minutes
 const refreshTokenExpiryMillis = 1000 * 60 * 60 * 24 * 5; // 5 days
 // const refreshTokenExpiryMillis = 1000 * 60 * 2; // 2m
 const minTimeToWaitToRenewRefreshTokensMillis = 1000 * 60 * 60 * 24; // 1 day
 // const minTimeToWaitToRenewRefreshTokensMillis = 1000 * 30; // 30s
+const accessTokenExpiryMillis = 1000 * 60 * 15; // 15 minutes
+
+const intervalForRefreshTokenCleanupMillis = 1000 * 60 * 60 * 24; // 1 day
+// const intervalForRefreshTokenCleanupMillis = 1000 * 30; // 30s
 
 
 // Unverified Accounts Lifetime -------------------------------------------------------------------------------------------------
@@ -81,9 +84,10 @@ export {
 	GAME_VERSION,
 	useOriginWhitelist,
 	allowedOrigins,
-	accessTokenExpiryMillis,
 	refreshTokenExpiryMillis,
 	minTimeToWaitToRenewRefreshTokensMillis,
+	accessTokenExpiryMillis,
+	intervalForRefreshTokenCleanupMillis,
 	maxExistenceTimeForUnverifiedAccountMillis,
 	intervalForRemovalOfOldUnverifiedAccountsMillis,
 };
