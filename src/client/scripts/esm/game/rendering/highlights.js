@@ -20,7 +20,7 @@ import preferences from '../../components/header/preferences.js';
 import gamefileutility from '../../chess/util/gamefileutility.js';
 import legalmoveshapes from './legalmoveshapes.js';
 import shapes from './shapes.js';
-import premove from '../misc/premove.js';
+import premovehighlights from './premovehighlights.js';
 // Import End
 
 /**
@@ -84,7 +84,7 @@ function render() {
 	renderLegalMoves();
 	arrows.renderEachHoveredPiece();
 	renderBoundingBoxOfRenderRange();
-	premove.renderHighlights();
+	premovehighlights.render();
 }
 
 function renderLegalMoves() {

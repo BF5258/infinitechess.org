@@ -25,6 +25,7 @@ const premoveHighlightColor = "premoveHighlightColor";
 const defaults = {
 	[lastMoveHighlightColor]: [0.72, 1, 0, 0.28],
 	[checkHighlightColor]: /* checkHighlightColor */ [1, 0, 0, 0.7],
+	[premoveHighlightColor]: [1, 0, 0, 0.3],
 	// If this is false, we will render them white,
 	// utilizing the more efficient color-less shader program!
 	useColoredPieces: false,
@@ -49,7 +50,6 @@ const themeDictionary = {
 		[legalMovesHighlightColor_Opponent]: [1, 0.18, 0, 0.37],
 		[legalMovesHighlightColor_Premove]: [0, 0, 0.38, 0.32],
 		[lastMoveHighlightColor]: [0.90, 1, 0, 0.30],
-		[premoveHighlightColor]: [1, 0, 0, 0.1]
 	},
 	sandstone: { // Sometimes thanksgiving uses this
 		[lightTiles]: [0.94, 0.88, 0.78, 1],

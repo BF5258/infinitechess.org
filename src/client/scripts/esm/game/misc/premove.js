@@ -10,21 +10,9 @@ import gamefileutility from '../../chess/util/gamefileutility.js';
 import legalmoves from '../../chess/logic/legalmoves.js';
 import specialdetect from '../../chess/logic/specialdetect.js';
 import onlinegame from '../misc/onlinegame.js'; // Circular dependent.
-// Rendering highlights should be in different module:
-import options from '../rendering/options.js'
-import shapes from '../rendering/shapes.js';
-import buffermodel from '../rendering/buffermodel.js'
 // Import End
 
 "use strict";
-
-/**
- * TODO:
- * Rendering highlights should be in a separate module.
- * Fix circular dependencies:
- *   onlinegame calls premove.submitPremove
- *   premove calls onlinegame.sendMove
- */
 
 /**
  * An option set by the user.
@@ -117,21 +105,6 @@ function isMoveLegal(gamefile, move) {
 	const moveLegal = legalmoves.checkIfMoveLegal(legalMoves, move.startCoords, move.endCoords);
 	specialdetect.transferSpecialFlags_FromCoordsToMove(move.endCoords, move);
 	return moveLegal;
-}
-
-//Should not be in premoves.js:
-function  renderHighlights() {
-	const gamefile = game.getGamefile();
-	const premoves = gamefile.premoves;
-	if (!premoves.length) return; //nothing to highlight
-	const color = options.getDefaultPremoveHighlightColor();
-	const data = [];
-	data.push(...shapes.getTransformedDataQuad_Color3D_FromCoord(premoves[0].startCoords, -0.005, color));
-	for (const premove of premoves) { 
-		data.push(...shapes.getTransformedDataQuad_Color3D_FromCoord(premove.endCoords, -0.005, color));
-	}
-	const model = buffermodel.createModel_Colored(new Float32Array(data), 3, "TRIANGLES");
-	model.render();
 }
 
 /** Adds a premove to the queue.
@@ -259,7 +232,6 @@ export default {
 	hidePremoves,
 	showPremoves,
 	clearPremoves,
-	renderHighlights,
 	submitPremove,
 	enablePremoves,
 	disablePremoves,
