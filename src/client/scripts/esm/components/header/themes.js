@@ -17,6 +17,7 @@ const legalMovesHighlightColor_Premove = "legalMovesHighlightColor_Premove";
 const lastMoveHighlightColor = "lastMoveHighlightColor";
 const checkHighlightColor = "checkHighlightColor";
 const premoveHighlightColor = "premoveHighlightColor";
+const boxOutlineColor = "boxOutlineColor";
 
 /**
  * Fallback properties for a themes properties
@@ -26,6 +27,7 @@ const defaults = {
 	[lastMoveHighlightColor]: [0.72, 1, 0, 0.28],
 	[checkHighlightColor]: /* checkHighlightColor */ [1, 0, 0, 0.7],
 	[premoveHighlightColor]: [1, 0, 0, 0.3],
+	[boxOutlineColor]: [0.5, 0.5, 0.5, 1],
 	// If this is false, we will render them white,
 	// utilizing the more efficient color-less shader program!
 	useColoredPieces: false,

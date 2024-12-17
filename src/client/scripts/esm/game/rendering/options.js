@@ -151,6 +151,10 @@ function getDefaultPremoveHighlightColor() {
 	return themes.getPropertyOfTheme(theme, 'premoveHighlightColor');
 }
 
+function getDefaultOutlineColor() {
+	return themes.getPropertyOfTheme(theme, 'boxOutlineColor');
+}
+
 function setTheme(newTheme) {
 	if (!themes.isThemeValid(newTheme)) {
 		console.error(`Invalid theme "${newTheme}"! Setting to default..`);
@@ -317,6 +321,7 @@ export default {
 	getDefaultLastMoveHighlightColor,
 	getDefaultCheckHighlightColor,
 	getDefaultPremoveHighlightColor,
+	getDefaultOutlineColor,
 	getPieceRegenColorArgs,
 	getColorOfType,
 	getEM,
