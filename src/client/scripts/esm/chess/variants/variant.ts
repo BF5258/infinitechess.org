@@ -53,7 +53,7 @@ type ColorVariantProperty<T> = {
 interface Variant {
 	positionString?: TimeVariantProperty<string>,
 	generator?: {
-		algorithm: () => any,
+		algorithm: () => Position,
 		rules: {
 			pawnDoublePush: boolean,
 			castleWith?: string
@@ -61,6 +61,11 @@ interface Variant {
 	},
 	movesetGenerator?: TimeVariantProperty<() => Movesets>,
 	gameruleModifications: TimeVariantProperty<GameRuleModifications>
+}
+
+/** A position in keys format. Entries look like: `"5,2": "pawnsW"` */
+interface Position {
+	[coordKey: string]: string
 }
 
 "use strict";
@@ -305,7 +310,7 @@ function getStartSnapshotPosition({ positionString, startingPosition, specialRig
 		positionString = formatconverter.LongToShort_Position(startingPosition, specialRights);
 	} else throw new Error("Not enough information to calculate the positionString, position, and specialRights of variant.");
 
-	console.log({ positionString, position: startingPosition, specialRights });
+	// console.log({ positionString, position: startingPosition, specialRights });
 
 	return { positionString, position: startingPosition, specialRights };
 }
@@ -496,4 +501,8 @@ export default {
 	getGameRulesOfVariant,
 	getPromotionsAllowed,
 	getMovesetsOfVariant,
+};
+
+export type {
+	Position
 };

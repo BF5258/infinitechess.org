@@ -1,11 +1,16 @@
 
+import { NODE_ENV } from './env.js';
+
+
+// Variables -----------------------------------------------------------
+
+
 /**
- * Whether to run the server in development mode.
+ * Whether the server is running in development mode.
  * It will be hosted on a different port for local host,
  * and a few other minor adjustments.
- * Disable in production.
  */
-const DEV_BUILD = true;
+const DEV_BUILD = NODE_ENV === 'development';
 
 /** 
  * Whether we bundle and minify files to send to the client
@@ -63,6 +68,12 @@ const accessTokenExpiryMillis = 1000 * 60 * 15; // 15 minutes
 const intervalForRefreshTokenCleanupMillis = 1000 * 60 * 60 * 24; // 1 day
 // const intervalForRefreshTokenCleanupMillis = 1000 * 30; // 30s
 
+/**
+ * The maximum number of logging sessions a user can have at
+ * one time before creating new sessions will terminate old sessions.
+ * */
+const sessionCap = 10;
+
 
 // Unverified Accounts Lifetime -------------------------------------------------------------------------------------------------
 
@@ -73,6 +84,16 @@ const maxExistenceTimeForUnverifiedAccountMillis = 1000 * 60 * 60 * 24 * 3; // 3
 /** The interval for how frequent to check for unverified account that exists more than `maxExistenceTimeForUnverifiedAccount` */
 const intervalForRemovalOfOldUnverifiedAccountsMillis = 1000 * 60 * 60 * 24 * 1; // 1 days
 // const intervalForRemovalOfOldUnverifiedAccountsMillis = 1000 * 30; // 30 seconds
+
+
+
+
+// Websockets -------------------------------------------------------------------------------------------------
+
+
+const printIncomingAndClosingSockets = false;
+const printIncomingAndOutgoingMessages = false;
+
 
 
 
@@ -89,6 +110,9 @@ export {
 	minTimeToWaitToRenewRefreshTokensMillis,
 	accessTokenExpiryMillis,
 	intervalForRefreshTokenCleanupMillis,
+	sessionCap,
 	maxExistenceTimeForUnverifiedAccountMillis,
 	intervalForRemovalOfOldUnverifiedAccountsMillis,
+	printIncomingAndClosingSockets,
+	printIncomingAndOutgoingMessages,
 };
