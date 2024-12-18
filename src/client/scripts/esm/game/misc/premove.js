@@ -26,7 +26,7 @@ function submitPremove(gamefile) {
 		return console.error("The premoves are still displayed on the board. Call `hidePremoves` first.");
 	}
 	
-	if (!gamefile.premoves.length || premoveMode<1)
+	if (!gamefile.premoves.length)
 		return; //The user has not made a premove.
 	
 	/** @type {Move} */ //We already checked that the array isn't empty. `premoves.shift()` should return a value.
@@ -65,8 +65,9 @@ function isMoveLegal(gamefile, move) {
 /** Adds a premove to the queue.
  * @param {Piece} piece - the piece that was moved
  * @param {Move} move - the move the piece made
+ * @param {boolean} wasDragged - If true, skip the animation
 */
-function makePremove(gamefile, move) {
+function makePremove(gamefile, move, wasDragged = false) {
 	if (!preferences.getPremoveEnabled()) return;
 	if (main.devBuild) console.log("A premove was made.");
 	
@@ -74,7 +75,7 @@ function makePremove(gamefile, move) {
 	
 	if(gamefile.premovesVisible!==false) {
 		gamefile.premovesVisible++;
-		movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
+		movepiece.makeMove(gamefile, move, {animate: !wasDragged, animateSecondary: wasDragged, flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
 	}
 }
 

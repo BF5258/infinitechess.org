@@ -370,7 +370,7 @@ function moveGamefilePiece(coords) {
 	
 	let gamefile = game.getGamefile();
 	if (isPremove) {
-		premove.makePremove(gamefile, move);
+		premove.makePremove(gamefile, move, draggingPiece);
 	} else {
 		movepiece.makeMove(gamefile, move, {animate: !draggingPiece, animateSecondary: draggingPiece});
 		onlinegame.sendMove();
