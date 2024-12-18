@@ -1,64 +1,19 @@
-/** 
- * This script records premoves made by the player and submits them to the server on their next turn.
- * The legality of the move is checked before submission.
- */
 
 // Import Start
-import game from '../chess/game.js';
 import movepiece from '../../chess/logic/movepiece.js';
 import gamefileutility from '../../chess/util/gamefileutility.js';
 import legalmoves from '../../chess/logic/legalmoves.js';
 import specialdetect from '../../chess/logic/specialdetect.js';
 import onlinegame from '../misc/onlinegame.js'; // Circular dependent.
+import preferences from '../../components/header/preferences.js';
 // Import End
 
 "use strict";
 
-/**
- * An option set by the user.
- * - 0: Premoves are disabled.
- * - 1: Allow a single premove. (like Lichess)
- * - 2: Allow multiple premoves.
- * @type {number}
+/** 
+ * This script records premoves made by the player and submits them to the server on their next turn.
+ * The legality of the move is checked before submission.
  */
-let premoveMode = 2;
-
-/** Enables or disables premoves.
- * @param {value} mode - 
- * - 0: Premoves are disabled.
- * - 1: Allow a single premove. (like Lichess)
- * - 2: Allow multiple premoves.
- */
-function enablePremoves(value = 2) {
-	premoveMode = value;
-	gamefile = game.getGamefile();
-	if(!value) return clearPremoves(gamefile);
-	if(value<2) {
-		hidePremoves(gamefile);
-		if(gamefile.premoves.length>1) gamefile.premoves.length = 1;
-	}
-}
-
-function disablePremoves() {
-	enablePremoves(0);
-}
-
-/**
- * Has the user enabled premoves?
- * @returns {boolean}
- */
-function arePremovesEnabled() {
-	return premoveMode>0;
-}
-
-/**
- * Returns true if the user has enabled premoves and they are allowed in the current game.
- * @returns {boolean}
- */
-function arePremovesAllowed() {
-	//I was going to add a gamerule to disable premoves but users would just disable it wouldn't they?
-	return premoveMode>0; //&& game.getGamefile().gameRules.premovesAllowed;
-}
 
 /**
  * Submits the next premove to the server if it is legal;
@@ -112,21 +67,12 @@ function isMoveLegal(gamefile, move) {
  * @param {Move} move - the move the piece made
 */
 function makePremove(gamefile, move) {
-	if (premoveMode<1)
-		return;
+	if (!preferences.getPremoveEnabled()) return;
 	if (main.devBuild) console.log("A premove was made.");
 	
-	if(premoveMode>1) gamefile.premoves.push(move);
-	else gamefile.premoves[0] = move;
+	gamefile.premoves.push(move);
 	
-	//There exists the possibility of the opponent capturing pieces obstructing a castle;
-	//therefore, premove castling should be displayed regardless of obstructions.
-	//TODO:
-	// - If there are multiple rooks with special rights in the same direction,
-	//   there is no way to premove with those that aren't the closest.
-	//   Do any variants have this?
-	
-	if(gamefile.premovesVisible!==false && premoveMode>1) {
+	if(gamefile.premovesVisible!==false) {
 		gamefile.premovesVisible++;
 		movepiece.makeMove(gamefile, move, {flipTurn: false, pushClock: false, doGameOverChecks: false, concludeGameIfOver: false, updateProperties: false });
 	}
@@ -136,7 +82,7 @@ function makePremove(gamefile, move) {
 function clearPremoves(gamefile)
 {
 	if (gamefile.premovesVisible) hidePremoves(gamefile);
-	gamefile.premovesVisible = premoveMode>1?0:false;
+	gamefile.premovesVisible = 0;
 	gamefile.premoves = [];
 }
 
@@ -171,7 +117,7 @@ function hidePremoves(gamefile, {updateData = true, clearRewindInfo = false} = {
  * - `updateData`: Whether to modify the mesh of all the pieces.
  */
 function showPremoves(gamefile, {updateData = true} = {}) {
-	if(premoveMode<2) return;
+	if(!preferences.getPremoveEnabled()) return;
 	if(gamefile.premovesVisible|=0) return console.error("Premoves are already shown.");
 	movepiece.forwardToFront(gamefile, { updateData, flipTurn: false, animateLastMove: false, updateProperties: false });
 	while(gamefile.premovesVisible < gamefile.premoves.length) {
@@ -233,10 +179,6 @@ export default {
 	showPremoves,
 	clearPremoves,
 	submitPremove,
-	enablePremoves,
-	disablePremoves,
-	arePremovesEnabled,
-	arePremovesAllowed,
 	getPlyCountExcludingPremoves,
 	getPremoveCountAtIndex,
 	isPremove

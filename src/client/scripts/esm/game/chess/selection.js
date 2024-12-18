@@ -296,7 +296,7 @@ function selectPiece(type, index, coords) {
 	isPremove = !isOpponentPiece && onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn();
 	
 	// Calculate the legal moves it has. Keep a record of this so that when the mouse clicks we can easily test if that is a valid square.
-	legalMoves = legalmoves.calculate(game.getGamefile(), pieceSelected, {isPremove: isPremove && premove.arePremovesAllowed()});
+	legalMoves = legalmoves.calculate(game.getGamefile(), pieceSelected, {isPremove: isPremove && preferences.getPremoveEnabled});
 	
 	highlights.regenModel(); // Generate the buffer model for the blue legal move fields.
 }
@@ -419,7 +419,7 @@ function canMovePieceType(pieceType) {
 	/* Local Game */ : pieceColor !== game.getGamefile().whosTurn;
 	if (isOpponentPiece) return false; // Don't move opponent pieces
 	const isPremove = !isOpponentPiece && onlinegame.areInOnlineGame() && !onlinegame.isItOurTurn();
-	return (!isPremove || premove.arePremovesEnabled());
+	return (!isPremove || preferences.getPremoveEnabled());
 }
 
 /** Renders the translucent piece underneath your mouse when hovering over the blue legal move fields. */

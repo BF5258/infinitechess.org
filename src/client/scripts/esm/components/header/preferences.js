@@ -11,12 +11,12 @@ let preferences; // { theme, legal_moves }
 // The legal moves shape preference
 const default_legal_moves = 'squares'; // dots/squares
 const default_drag_enabled = true;
-const default_premove_mode = false; // Change this to true when premoves are implemented.
+const default_premove_enabled = true;
 const default_perspective_sensitivity = 100;
 const default_perspective_fov = 90;
 
 /** Prefs that do NOT get saved on the server side */
-const clientSidePrefs = ['perspective_sensitivity', 'perspective_fov', 'drag_enabled', 'premove_mode'];
+const clientSidePrefs = ['perspective_sensitivity', 'perspective_fov', 'drag_enabled', 'premove_enabled'];
 
 /**
  * Whether a change was made to the preferences since the last time we sent them over to the server.
@@ -143,12 +143,12 @@ function setDragEnabled(drag_enabled) {
 	onChangeMade();
 	savePreferences();
 }
-function getPremoveMode() {
-	return preferences.premove_mode ?? default_premove_mode;
+function getPremoveEnabled() {
+	return preferences.premove_enabled ?? default_premove_enabled;
 }
-function setPremoveMode(premove_mode) {
-	if (typeof premove_mode !== 'boolean') throw new Error('Cannot set preference premove_mode when it is not a string.');
-	preferences.premove_mode = premove_mode;
+function setPremoveEnabled(premove_enabled) {
+	if (typeof premove_enabled !== 'boolean') throw new Error('Cannot set preference premove_enabled when it is not a string.');
+	preferences.premove_enabled = premove_enabled;
 	onChangeMade();
 	savePreferences();
 }
@@ -183,8 +183,8 @@ export default {
 	setLegalMovesShape,
 	getDragEnabled,
 	setDragEnabled,
-	getPremoveMode,
-	setPremoveMode,
+	getPremoveEnabled,
+	setPremoveEnabled,
 	getPerspectiveSensitivity,
 	setPerspectiveSensitivity,
 	getPerspectiveFOV,

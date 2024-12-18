@@ -2,7 +2,8 @@
 // This script allows us to enable or disable premoves and dragging pieces
 
 import preferences from "../preferences.js";
-import statustext from "../../../game/gui/statustext.js";
+import game from "../../../game/chess/game.js";
+import premove from "../../../game/misc/premove.js";
 
 // Document Elements -------------------------------------------------------------------------
 
@@ -24,7 +25,7 @@ const premoveCheckbox = document.querySelector('.selection-option.premove input'
 
 function showCheckmarkOnSelectedOptions() {
 	dragCheckbox.checked = preferences.getDragEnabled();
-	premoveCheckbox.checked = preferences.getPremoveMode();
+	premoveCheckbox.checked = preferences.getPremoveEnabled();
 }
 
 function open() {
@@ -53,12 +54,8 @@ function toggleDrag() {
 	preferences.setDragEnabled(dragCheckbox.checked);
 }
 function togglePremove() {
-	statustext.showStatus(translations.planned_feature);
-	// If the checkbox is disabled it stops sending onclick events.
-	// Uncheck the box
-	premoveCheckbox.checked = false;
-	
-	//preferences.setPremoveMode(premoveCheckbox.checked);
+	preferences.setPremoveEnabled(premoveCheckbox.checked);
+	if (!premoveCheckbox.checked) premove.clearPremoves(game.getGamefile());
 }
 
 export default {
