@@ -25,6 +25,7 @@ import draganimation from '../rendering/draganimation.js';
 import space from '../misc/space.js';
 import preferences from '../../components/header/preferences.js';
 import gameslot from './gameslot.js';
+import arrows from '../rendering/arrows.js';
 // Import End
 
 /**
@@ -80,6 +81,8 @@ let promoteTo;
 function getPieceSelected() { return pieceSelected; }
 
 function areDraggingPiece() { return draggingPiece; }
+
+function getHoverSquare() { return hoverSquare; }
 
 /**
  * Returns *true* if a piece is currently selected.
@@ -137,8 +140,25 @@ function update() {
 	// Calculate if the hover square is legal so we know if we need to render a ghost image...
 	
 	// What coordinates are we hovering over?
-	hoverSquare = (input.getPointerClicked() && !draggingPiece) ? input.getPointerClickedTile()
+	let hoveringArrow;
+	if (arrows.isMouseHovering()) {
+		const hoveredArrows = arrows.getHoveredPieces();
+		for (const arrow of hoveredArrows) {
+			const coords = coordutil.getCoordsFromKey(arrow);
+			if (pieceSelected && !legalmoves.checkIfMoveLegal(legalMoves, pieceSelected.coords, coords)) continue;
+			if (hoveringArrow) {
+				hoveringArrow = false;
+				break;
+			}
+			hoveringArrow = coords;
+		}
+	}
+	if (hoveringArrow) {
+		hoverSquare = hoveringArrow;
+	} else {
+		hoverSquare = (input.getPointerClicked() && !draggingPiece) ? input.getPointerClickedTile()
             : space.convertWorldSpaceToCoords_Rounded(input.getPointerWorldLocation());
+	}
 	
 	updateHoverSquareLegal();
 	
@@ -425,5 +445,6 @@ export default {
 	renderGhostPiece,
 	isOpponentPieceSelected,
 	arePremoving,
-	areDraggingPiece
+	areDraggingPiece,
+	getHoverSquare
 };

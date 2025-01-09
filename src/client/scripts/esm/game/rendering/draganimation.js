@@ -15,6 +15,7 @@ import coordutil from "../../chess/util/coordutil.js";
 import themes from "../../components/header/themes.js";
 import preferences from "../../components/header/preferences.js";
 import board from "./board.js";
+import arrows from "./arrows.js";
 // Import end
 
 /**
@@ -75,7 +76,9 @@ function renderPiece() {
 	if (hoveredCoords) outlineModel = genOutlineModel();
 	else outlineModel = genIntersectingLines();
 	outlineModel.render();
-
+	
+	if (arrows.isMouseHovering()) return;
+	
 	const draggedPieceModel = genPieceModel();
 	draggedPieceModel.render();
 }

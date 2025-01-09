@@ -100,6 +100,8 @@ function setMode(value) {
  */
 function isMouseHovering() { return hovering; }
 
+function getHoveredPieces() { return Object.keys(piecesHoveredOver); }
+
 function update() {
 	if (mode === 0) return;
 
@@ -262,7 +264,7 @@ function update() {
 	for (const pieceHovered of piecesHoveringOverThisFrame) { // { type, coords, dir }
 		onPieceIndicatorHover(pieceHovered.type, pieceHovered.coords, pieceHovered.dir); // Generate their legal moves and highlight model
 	}
-    
+
 	model = createModel(data, 2, "TRIANGLES", true, spritesheet.getSpritesheet());
 	modelArrows = createModel(dataArrows, 2, "TRIANGLES", true);
 }
@@ -317,9 +319,6 @@ function concatData(renderCoords, type, paddingDir, worldWidth, padding, pieceCo
 	// Convert to world-space
 	const worldCoords = space.convertCoordToWorldSpace(renderCoords);
 
-	const rotation = perspective.getIsViewingBlackPerspective() ? -1 : 1;
-	const { texleft, texbottom, texright, textop } = bufferdata.getTexDataOfType(type, rotation);
-
 	const xPad = paddingDir.includes('right') ? -padding
                 : paddingDir.includes('left')  ?  padding
                 : 0;
@@ -336,8 +335,6 @@ function concatData(renderCoords, type, paddingDir, worldWidth, padding, pieceCo
 	const endX = startX + worldWidth;
 	const endY = startY + worldWidth;
 
-	// Color
-	const { r, g, b } = options.getColorOfType(type);
 	let thisOpacity = opacity;
 
 	// Opacity changing with distance
@@ -350,7 +347,13 @@ function concatData(renderCoords, type, paddingDir, worldWidth, padding, pieceCo
 	const mouseWorldY = input.getTouchClickedWorld() ? input.getTouchClickedWorld()[1] : mouseWorldLocation[1];
 	if (mouseWorldX > startX && mouseWorldX < endX && mouseWorldY > startY && mouseWorldY < endY) { // Mouse is hovering over
 		piecesHoveringOverThisFrame.push({ type, coords: pieceCoords, dir: direction });
-		thisOpacity = 1;
+		if (selection.areDraggingPiece()) {
+			if(coordutil.areCoordsEqual(selection.getHoverSquare(), pieceCoords)) {
+				type = selection.getPieceSelected().type;
+				thisOpacity = 1;
+			}
+		}
+		else thisOpacity = 1;
 		hovering = true;
 		// If we also clicked, then teleport!
 		if (input.isMouseDown_Left() || input.getTouchClicked()) {
@@ -363,6 +366,10 @@ function concatData(renderCoords, type, paddingDir, worldWidth, padding, pieceCo
 			if (input.isMouseDown_Left()) input.removeMouseDown_Left();
 		}
 	}
+	
+	const { r, g, b } = options.getColorOfType(type);
+	const rotation = perspective.getIsViewingBlackPerspective() ? -1 : 1;
+	const { texleft, texbottom, texright, textop } = bufferdata.getTexDataOfType(type, rotation);
 
 	const thisData = bufferdata.getDataQuad_ColorTexture(startX, startY, endX, endY, texleft, texbottom, texright, textop, r, g, b, thisOpacity);
 
@@ -478,6 +485,7 @@ function absoluteValueOfDirection(direction) {
 }
 
 function renderEachHoveredPieceLegalMoves() {
+	if (selection.areDraggingPiece()) return;
 	const boardPos = movement.getBoardPos();
 	const model_Offset = legalmovehighlights.getOffset();
 	const position = [
@@ -538,6 +546,7 @@ export default {
 	setMode,
 	renderThem,
 	isMouseHovering,
+	getHoveredPieces,
 	renderEachHoveredPieceLegalMoves,
 	regenModelsOfHoveredPieces,
 	clearListOfHoveredPieces
